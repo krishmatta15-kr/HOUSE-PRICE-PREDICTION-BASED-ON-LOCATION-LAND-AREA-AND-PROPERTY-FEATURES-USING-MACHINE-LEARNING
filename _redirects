@@ -1,0 +1,4 @@
+# Netlify redirects file for hearth. Ames Housing 3D Studio
+/tour.html    /tour.html    200
+/tour         /tour.html    200
+/*            /index.html   200

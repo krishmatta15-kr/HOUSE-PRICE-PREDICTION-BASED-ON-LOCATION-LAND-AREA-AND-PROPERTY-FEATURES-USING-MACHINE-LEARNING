@@ -1,0 +1,13 @@
+{
+  "model_name": "GradientBoostingRegressor",
+  "selection_criteria": "Lowest 5-Fold CV MAE ($15,840)",
+  "features": [
+    { "name": "OverallQual", "importance": 0.384, "rank": 1, "description": "Material quality & architectural craft" },
+    { "name": "GrLivArea", "importance": 0.272, "rank": 2, "description": "Above ground living area volume" },
+    { "name": "TotalBsmtSF", "importance": 0.125, "rank": 3, "description": "Basement foundation & storage area" },
+    { "name": "YearBuilt", "importance": 0.089, "rank": 4, "description": "Modernity of build and vintage" },
+    { "name": "GarageCars", "importance": 0.068, "rank": 5, "description": "Vehicle bay space & garage footprint" },
+    { "name": "FullBath", "importance": 0.038, "rank": 6, "description": "Finished bathroom plumbing count" },
+    { "name": "BedroomAbvGr", "importance": 0.024, "rank": 7, "description": "Bedroom layout allocation" }
+  ]
+}

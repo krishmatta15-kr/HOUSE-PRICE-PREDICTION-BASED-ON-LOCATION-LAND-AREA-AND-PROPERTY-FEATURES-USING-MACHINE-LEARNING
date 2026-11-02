@@ -1,0 +1,1247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D House Tour — hearth. Interactive Walkthrough</title>
+  <meta name="description" content="Immersive 3D architectural house tour. Walk through the living room, chef's kitchen, master suite, finished basement, and garage.">
+
+  <!-- Google Fonts: Plus Jakarta Sans / Cormorant Garamond / JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Cormorant+Garamond:ital,wght@0,600;0,700;1,600&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- Three.js for 3D Walkthrough Engine (with Multi-CDN Failover) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script>
+    if (typeof THREE === 'undefined') {
+      document.write('<script src="https://unpkg.com/three@0.128.0/build/three.min.js"><\/script>');
+    }
+  </script>
+  <script>
+    if (typeof THREE === 'undefined') {
+      document.write('<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"><\/script>');
+    }
+  </script>
+
+  <style>
+    :root {
+      --bg-dark: #0a110d;
+      --card-bg: rgba(18, 30, 23, 0.85);
+      --card-border: rgba(232, 180, 110, 0.28);
+      --hearth-gold: #e8b04a;
+      --hearth-amber: #f59e0b;
+      --gold-light: #ffd68a;
+      --emerald: #34d399;
+      --timber: #8b5a2b;
+      --text-main: #fbf7ee;
+      --text-muted: #b8c7bd;
+      --text-sub: #7f9486;
+      --font: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-serif: 'Cormorant Garamond', Georgia, serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background: var(--bg-dark);
+      color: var(--text-main);
+      font-family: var(--font);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* 3D Viewport */
+    #tour-canvas-container {
+      position: absolute;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 1;
+    }
+
+    #tour-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: grab;
+    }
+
+    #tour-canvas:active {
+      cursor: grabbing;
+    }
+
+    /* Top HUD Header */
+    .hud-header {
+      position: absolute;
+      top: 18px;
+      left: 20px;
+      right: 20px;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      pointer-events: none;
+    }
+
+    .hud-header * {
+      pointer-events: auto;
+    }
+
+    .brand-group {
+      background: rgba(13, 22, 18, 0.88);
+      backdrop-filter: blur(14px);
+      border: 1px solid var(--card-border);
+      padding: 10px 18px;
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    }
+
+    .back-btn {
+      color: var(--hearth-gold);
+      background: rgba(232, 176, 74, 0.12);
+      border: 1px solid rgba(232, 176, 74, 0.3);
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .back-btn:hover {
+      background: var(--hearth-gold);
+      color: #0d1612;
+      transform: translateX(-2px);
+    }
+
+    .brand-title {
+      font-size: 17px;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+    }
+
+    .house-spec-pill {
+      background: rgba(13, 22, 18, 0.88);
+      backdrop-filter: blur(14px);
+      border: 1px solid var(--card-border);
+      padding: 8px 18px;
+      border-radius: 999px;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    }
+
+    .spec-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-muted);
+    }
+
+    .spec-item strong {
+      color: var(--gold-light);
+      font-weight: 700;
+    }
+
+    /* Right Controls HUD */
+    .hud-right {
+      position: absolute;
+      top: 80px;
+      right: 20px;
+      z-index: 20;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      pointer-events: none;
+    }
+
+    .hud-right * {
+      pointer-events: auto;
+    }
+
+    /* Floor Plan Mini-Map Card */
+    .minimap-card {
+      width: 210px;
+      background: rgba(13, 22, 18, 0.92);
+      backdrop-filter: blur(14px);
+      border: 1px solid var(--card-border);
+      border-radius: 18px;
+      padding: 14px;
+      box-shadow: 0 16px 36px rgba(0,0,0,0.5);
+    }
+
+    .minimap-title {
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--hearth-gold);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .minimap-svg {
+      width: 100%;
+      height: 140px;
+      border-radius: 10px;
+      background: #09120e;
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .minimap-room {
+      cursor: pointer;
+      transition: fill 0.2s ease;
+    }
+
+    .minimap-room:hover {
+      fill: rgba(232, 176, 74, 0.4) !important;
+    }
+
+    .minimap-room.active {
+      fill: rgba(232, 176, 74, 0.65) !important;
+      stroke: #ffd68a;
+      stroke-width: 1.5;
+    }
+
+    /* Floating Tool Actions */
+    .action-btn-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .icon-action-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: rgba(13, 22, 18, 0.88);
+      backdrop-filter: blur(14px);
+      border: 1px solid var(--card-border);
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+    }
+
+    .icon-action-btn:hover {
+      background: rgba(232, 176, 74, 0.2);
+      border-color: var(--hearth-gold);
+      color: var(--gold-light);
+      transform: scale(1.05);
+    }
+
+    .icon-action-btn.active {
+      background: var(--hearth-gold);
+      color: #0d1612;
+      border-color: var(--gold-light);
+    }
+
+    /* Bottom Room Navigation Bar */
+    .hud-bottom {
+      position: absolute;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 20;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      pointer-events: none;
+      max-width: 95vw;
+    }
+
+    .hud-bottom * {
+      pointer-events: auto;
+    }
+
+    .room-selector-dock {
+      background: rgba(13, 22, 18, 0.92);
+      backdrop-filter: blur(18px);
+      border: 1.5px solid var(--card-border);
+      border-radius: 999px;
+      padding: 6px 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      overflow-x: auto;
+      box-shadow: 0 16px 45px rgba(0,0,0,0.65);
+    }
+
+    .room-pill {
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-muted);
+      padding: 8px 16px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      white-space: nowrap;
+    }
+
+    .room-pill:hover {
+      color: var(--text-main);
+      background: rgba(255,255,255,0.06);
+    }
+
+    .room-pill.active {
+      background: linear-gradient(135deg, #e8b04a 0%, #b87a22 100%);
+      color: #0d1612;
+      box-shadow: 0 4px 18px rgba(232, 176, 74, 0.4);
+      transform: translateY(-1px);
+    }
+
+    .room-pill i {
+      font-size: 14px;
+    }
+
+    /* Room Information Toast */
+    .room-toast {
+      background: rgba(18, 30, 23, 0.88);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(232, 180, 110, 0.25);
+      padding: 6px 16px;
+      border-radius: 999px;
+      font-size: 12px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .room-toast strong {
+      color: var(--gold-light);
+    }
+
+    /* Hotspot Annotation Pin */
+    .hotspot {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      pointer-events: auto;
+      cursor: pointer;
+      z-index: 15;
+    }
+
+    .hotspot-ring {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: rgba(232, 176, 74, 0.25);
+      border: 2px solid var(--hearth-gold);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: pulseGlow 2s infinite;
+      color: #ffd68a;
+      font-size: 12px;
+      box-shadow: 0 0 12px rgba(232, 176, 74, 0.5);
+    }
+
+    .hotspot-tooltip {
+      position: absolute;
+      left: 36px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(13, 22, 18, 0.95);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--hearth-gold);
+      padding: 8px 14px;
+      border-radius: 12px;
+      font-size: 12px;
+      color: var(--text-main);
+      width: max-content;
+      max-width: 220px;
+      pointer-events: none;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.2s ease;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+    }
+
+    .hotspot:hover .hotspot-tooltip {
+      opacity: 1;
+      visibility: visible;
+      left: 40px;
+    }
+
+    @keyframes pulseGlow {
+      0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(232, 176, 74, 0.6); }
+      70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(232, 176, 74, 0); }
+      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(232, 176, 74, 0); }
+    }
+
+    /* Helper instruction overlay */
+    .walkthrough-hint {
+      position: absolute;
+      bottom: 86px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 18;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 5px 14px;
+      border-radius: 999px;
+      font-size: 11px;
+      color: #cbd5e1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 3D Canvas Container -->
+  <div id="tour-canvas-container">
+    <canvas id="tour-canvas"></canvas>
+  </div>
+
+  <!-- Interactive 3D Hotspot Container -->
+  <div id="hotspot-layer"></div>
+
+  <!-- Top HUD Header -->
+  <div class="hud-header">
+    <div class="brand-group">
+      <a href="index.html" class="back-btn" title="Back to Valuation Studio">
+        <i class="fa-solid fa-arrow-left"></i>
+        <span>Studio</span>
+      </a>
+      <span class="brand-title">hearth<span style="color:var(--hearth-gold); font-family:var(--font-serif); font-style:italic;">.</span> <span style="font-size:14px; font-weight:600; color:var(--text-muted);">| 3D House Tour</span></span>
+    </div>
+
+    <div class="house-spec-pill">
+      <div class="spec-item">
+        <i class="fa-solid fa-house" style="color:var(--hearth-gold);"></i>
+        <span id="hudArea">1,800 sq ft</span>
+      </div>
+      <div class="spec-item">
+        <i class="fa-solid fa-award" style="color:#34d399;"></i>
+        <span>Qual <strong id="hudQual">7/10</strong></span>
+      </div>
+      <div class="spec-item">
+        <i class="fa-solid fa-bed"></i>
+        <span id="hudBeds">3 Bed</span>
+      </div>
+      <div class="spec-item">
+        <i class="fa-solid fa-bath"></i>
+        <span id="hudBaths">2 Bath</span>
+      </div>
+      <div class="spec-item" style="border-left: 1px solid rgba(255,255,255,0.15); padding-left: 10px;">
+        <i class="fa-solid fa-tag" style="color:var(--gold-light);"></i>
+        <strong id="hudValuation" style="color:#ffd68a; font-size:14px;">$231,000</strong>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right HUD: Mini-map & Tool Actions -->
+  <div class="hud-right">
+    <!-- Interactive Floor Plan Mini-Map -->
+    <div class="minimap-card">
+      <div class="minimap-title">
+        <span><i class="fa-solid fa-map-location-dot"></i> Floor Plan</span>
+        <span id="minimapFloorLabel" style="font-size:10px; color:#ffd68a;">Level 1</span>
+      </div>
+      <svg class="minimap-svg" viewBox="0 0 200 140" id="miniMapSvg">
+        <!-- Living Room -->
+        <rect id="mm-living" class="minimap-room active" x="15" y="15" width="80" height="65" fill="#1b2e23" stroke="#2a4535" rx="4" onclick="navigateToRoom('living')"/>
+        <text x="35" y="52" fill="#e8b04a" font-size="10" font-weight="700">Living</text>
+
+        <!-- Kitchen & Dining -->
+        <rect id="mm-kitchen" class="minimap-room" x="100" y="15" width="85" height="50" fill="#1b2e23" stroke="#2a4535" rx="4" onclick="navigateToRoom('kitchen')"/>
+        <text x="122" y="44" fill="#cbd5e1" font-size="10" font-weight="600">Kitchen</text>
+
+        <!-- Master Bedroom -->
+        <rect id="mm-bedroom" class="minimap-room" x="15" y="85" width="70" height="45" fill="#1b2e23" stroke="#2a4535" rx="4" onclick="navigateToRoom('bedroom')"/>
+        <text x="25" y="112" fill="#cbd5e1" font-size="9" font-weight="600">Master Bed</text>
+
+        <!-- Bathroom -->
+        <rect id="mm-bathroom" class="minimap-room" x="90" y="70" width="45" height="35" fill="#1b2e23" stroke="#2a4535" rx="4" onclick="navigateToRoom('bathroom')"/>
+        <text x="96" y="91" fill="#cbd5e1" font-size="8" font-weight="600">Bath</text>
+
+        <!-- Garage -->
+        <rect id="mm-garage" class="minimap-room" x="140" y="70" width="45" height="60" fill="#1b2e23" stroke="#2a4535" rx="4" onclick="navigateToRoom('garage')"/>
+        <text x="145" y="105" fill="#cbd5e1" font-size="8" font-weight="600">Garage</text>
+
+        <!-- Basement Tab -->
+        <rect id="mm-basement" class="minimap-room" x="90" y="110" width="45" height="20" fill="#1b2e23" stroke="#2a4535" rx="3" onclick="navigateToRoom('basement')"/>
+        <text x="95" y="124" fill="#cbd5e1" font-size="7" font-weight="600">Bsmt ⬇</text>
+
+        <!-- Radar Position Marker -->
+        <circle id="radarDot" cx="55" cy="48" r="5" fill="#ffd68a" stroke="#000" stroke-width="1.5"/>
+      </svg>
+    </div>
+
+    <!-- Quick Tool Actions -->
+    <div class="action-btn-group">
+      <button class="icon-action-btn" id="btnLighting" title="Toggle Golden Hour / Cozy Night" onclick="toggleDayNight()">
+        <i class="fa-solid fa-moon" id="lightingIcon"></i>
+      </button>
+      <button class="icon-action-btn" id="btnAutoSpin" title="Toggle Auto-Orbit" onclick="toggleAutoTour()">
+        <i class="fa-solid fa-arrows-spin"></i>
+      </button>
+      <button class="icon-action-btn" id="btnResetView" title="Reset Camera View" onclick="resetCurrentRoomView()">
+        <i class="fa-solid fa-crosshairs"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Drag / Walk Instruction Hint -->
+  <div class="walkthrough-hint">
+    <i class="fa-solid fa-hand-pointer" style="color:var(--hearth-gold);"></i>
+    <span>Click & drag to look around 360° • Click room buttons to travel inside</span>
+  </div>
+
+  <!-- Bottom Room Navigation Dock -->
+  <div class="hud-bottom">
+    <div class="room-toast" id="roomToast">
+      <i class="fa-solid fa-compass" style="color:var(--hearth-gold);"></i>
+      <span>Currently in: <strong id="toastRoomName">Great Room & Hearth Fireplace</strong></span>
+    </div>
+
+    <div class="room-selector-dock">
+      <button class="room-pill active" onclick="navigateToRoom('living')" id="pill-living">
+        <i class="fa-solid fa-couch"></i>
+        <span>Living Room</span>
+      </button>
+      <button class="room-pill" onclick="navigateToRoom('kitchen')" id="pill-kitchen">
+        <i class="fa-solid fa-utensils"></i>
+        <span>Chef Kitchen</span>
+      </button>
+      <button class="room-pill" onclick="navigateToRoom('bedroom')" id="pill-bedroom">
+        <i class="fa-solid fa-bed"></i>
+        <span>Master Suite</span>
+      </button>
+      <button class="room-pill" onclick="navigateToRoom('bathroom')" id="pill-bathroom">
+        <i class="fa-solid fa-bath"></i>
+        <span>Spa Bath</span>
+      </button>
+      <button class="room-pill" onclick="navigateToRoom('basement')" id="pill-basement">
+        <i class="fa-solid fa-layer-group"></i>
+        <span>Basement Den</span>
+      </button>
+      <button class="room-pill" onclick="navigateToRoom('garage')" id="pill-garage">
+        <i class="fa-solid fa-warehouse"></i>
+        <span>Garage Bay</span>
+      </button>
+      <button class="room-pill" onclick="navigateToRoom('exterior')" id="pill-exterior">
+        <i class="fa-solid fa-tree"></i>
+        <span>Patio Deck</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- 3D Tour JavaScript Engine -->
+  <script>
+    // Parse URL query specs if provided from index.html
+    const params = new URLSearchParams(window.location.search);
+    const spec = {
+      area: parseInt(params.get('area') || '1800'),
+      qual: parseInt(params.get('qual') || '7'),
+      beds: parseInt(params.get('beds') || '3'),
+      baths: parseInt(params.get('baths') || '2'),
+      cars: parseInt(params.get('cars') || '2'),
+      bsmt: parseInt(params.get('bsmt') || '900'),
+      year: parseInt(params.get('year') || '2005'),
+      price: parseInt(params.get('price') || '231000')
+    };
+
+    // Update HUD specs
+    document.getElementById('hudArea').textContent = spec.area.toLocaleString() + ' sq ft';
+    document.getElementById('hudQual').textContent = spec.qual + '/10';
+    document.getElementById('hudBeds').textContent = spec.beds + ' Bed';
+    document.getElementById('hudBaths').textContent = spec.baths + ' Bath';
+    document.getElementById('hudValuation').textContent = '$' + spec.price.toLocaleString();
+
+    // Rooms Configuration & Camera Coordinates
+    const ROOMS = {
+      living: {
+        name: "Great Room & Hearth Fireplace",
+        desc: "Vaulted timber ceilings, oak hardwood floors, and natural stone fireplace.",
+        camPos: { x: 0, y: 3.2, z: 4.8 },
+        lookAt: { x: 0, y: 2.2, z: -4.5 },
+        radar: { cx: 55, cy: 48 },
+        level: "Level 1",
+        hotspots: [
+          { pos: { x: 0, y: 1.8, z: -4.2 }, title: "Stone Hearth Fireplace", detail: "Natural riverstone facade with solid reclaimed cedar mantel and warm gas embers." },
+          { pos: { x: -3.2, y: 1.5, z: 0.5 }, title: "Timber Bay Window", detail: "Double-hung argon-insulated low-E windows overlooking the landscaped front lawn." },
+          { pos: { x: 2.4, y: 0.6, z: 1.5 }, title: "White Oak Hardwood", detail: "Quarter-sawn wide plank American oak finished with durable satin seal." }
+        ]
+      },
+      kitchen: {
+        name: "Gourmet Chef's Kitchen & Island",
+        desc: "Calacatta gold quartz waterfall counter, custom shaker cabinets, and gas range.",
+        camPos: { x: 8.5, y: 3.2, z: 3.5 },
+        lookAt: { x: 8.5, y: 2.2, z: -3.5 },
+        radar: { cx: 142, cy: 40 },
+        level: "Level 1",
+        hotspots: [
+          { pos: { x: 8.5, y: 1.6, z: -0.5 }, title: "Waterfall Quartz Island", detail: "Bookmatched 3cm engineered quartz with breakfast bar seating for four." },
+          { pos: { x: 11.5, y: 2.2, z: -2.5 }, title: "Custom Shaker Cabinetry", detail: "Soft-close solid maple cabinet boxes with under-mount LED ambient task lighting." }
+        ]
+      },
+      bedroom: {
+        name: "Primary Master Suite",
+        desc: "Spacious master retreat with custom recessed lighting and morning garden views.",
+        camPos: { x: -8.5, y: 3.2, z: 3.0 },
+        lookAt: { x: -8.5, y: 2.0, z: -4.0 },
+        radar: { cx: 50, cy: 108 },
+        level: "Level 1",
+        hotspots: [
+          { pos: { x: -8.5, y: 1.4, z: -3.2 }, title: "King Platform Bed & Upholstered Wall", detail: "Architectural acoustic wall panels with built-in reading sconces." },
+          { pos: { x: -11.5, y: 2.0, z: 0.0 }, title: "Walk-in Dressing Closet", detail: "Custom California-style closet organizers with cedar lining." }
+        ]
+      },
+      bathroom: {
+        name: "En-Suite Spa Bathroom",
+        desc: "Frameless glass walk-in shower, freestanding soaking tub, and double floating vanity.",
+        camPos: { x: -4.5, y: 3.0, z: -6.5 },
+        lookAt: { x: -4.5, y: 1.8, z: -11.0 },
+        radar: { cx: 112, cy: 88 },
+        level: "Level 1",
+        hotspots: [
+          { pos: { x: -4.5, y: 1.0, z: -10.2 }, title: "Freestanding Soaking Tub", detail: "Deep acrylic sculptural bathtub with matte black floor-mounted filler." },
+          { pos: { x: -6.5, y: 2.2, z: -8.5 }, title: "Dual Vanity & Backlit Mirror", detail: "Quartz countertop with integrated undermount porcelain sinks and defogging mirror." }
+        ]
+      },
+      basement: {
+        name: "Finished Lower Entertainment Den",
+        desc: `Full ${spec.bsmt} sq ft finished foundation with 9ft acoustic ceilings and home theater.`,
+        camPos: { x: 0, y: -4.2, z: 4.0 },
+        lookAt: { x: 0, y: -4.8, z: -5.0 },
+        radar: { cx: 112, cy: 120 },
+        level: "Lower Level (Basement)",
+        hotspots: [
+          { pos: { x: 0, y: -4.0, z: -4.8 }, title: "4K Laser Projection Wall", detail: "Acoustically transparent 120-inch fixed screen with Dolby Atmos 7.1 surround sound." },
+          { pos: { x: 3.2, y: -4.8, z: -0.5 }, title: "Wet Bar & Beverage Center", detail: "Sub-Zero dual-zone wine cooler, quartz beverage counter, and bar sink." }
+        ]
+      },
+      garage: {
+        name: `${spec.cars}-Car Attached Finished Garage`,
+        desc: "Commercial polyaspartic epoxy flooring, built-in slatwall storage, and EV charger.",
+        camPos: { x: 12.0, y: 2.8, z: 10.0 },
+        lookAt: { x: 12.0, y: 2.0, z: 3.0 },
+        radar: { cx: 162, cy: 100 },
+        level: "Garage Wing",
+        hotspots: [
+          { pos: { x: 14.2, y: 2.0, z: 5.5 }, title: "Level-2 EV Charging Station", detail: "50-amp 240V dedicated electric vehicle fast charging station." },
+          { pos: { x: 10.0, y: 0.1, z: 5.0 }, title: "High-Gloss Epoxy Flooring", detail: "Industrial multi-layer flake epoxy resistant to chemicals and tire lift." }
+        ]
+      },
+      exterior: {
+        name: "Private Backyard Patio & Cedar Deck",
+        desc: "Outdoor living space with pergola, built-in barbecue station, and mature landscaping.",
+        camPos: { x: 0, y: 4.5, z: 16.0 },
+        lookAt: { x: 0, y: 2.5, z: 0.0 },
+        radar: { cx: 100, cy: 20 },
+        level: "Exterior Grounds",
+        hotspots: [
+          { pos: { x: 3.0, y: 1.2, z: 12.0 }, title: "Outdoor Fire Pit & Lounge", detail: "Smokeless granite fire pit with comfortable deep-seating wicker lounge." },
+          { pos: { x: 0, y: 5.5, z: 4.0 }, title: "Architectural Cedar Facade", detail: "High-grade board-and-batten vertical cedar siding with metal standing-seam accents." }
+        ]
+      }
+    };
+
+    let activeRoomKey = 'living';
+    let isNightMode = true;
+    let autoSpin = false;
+    let scene, camera, renderer;
+    let roomGroup;
+    let ambientLight, sunLight, hearthLight;
+    let targetCamPos = { ...ROOMS.living.camPos };
+    let targetLookAt = { ...ROOMS.living.lookAt };
+    let currentLookAt = { ...ROOMS.living.lookAt };
+
+    // Mouse Interaction
+    let isDragging = false;
+    let prevMouseX = 0, prevMouseY = 0;
+    let cameraYaw = 0;
+    let cameraPitch = 0;
+
+    function init3DTour() {
+      const container = document.getElementById('tour-canvas-container');
+      const canvas = document.getElementById('tour-canvas');
+
+      // Three.js Scene
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x0c1510);
+      scene.fog = new THREE.FogExp2(0x0c1510, 0.018);
+
+      // Camera
+      camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 150);
+      camera.position.set(ROOMS.living.camPos.x, ROOMS.living.camPos.y, ROOMS.living.camPos.z);
+      camera.lookAt(ROOMS.living.lookAt.x, ROOMS.living.lookAt.y, ROOMS.living.lookAt.z);
+
+      // Renderer
+      renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, powerPreference: "high-performance" });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+      // Lights
+      ambientLight = new THREE.AmbientLight(0xffecd6, 0.55);
+      scene.add(ambientLight);
+
+      sunLight = new THREE.DirectionalLight(0xfff1dc, 1.2);
+      sunLight.position.set(15, 25, 20);
+      sunLight.castShadow = true;
+      sunLight.shadow.mapSize.width = 1024;
+      sunLight.shadow.mapSize.height = 1024;
+      scene.add(sunLight);
+
+      // Hearth Fireplace Warm Point Light
+      hearthLight = new THREE.PointLight(0xff8c2b, 2.2, 14);
+      hearthLight.position.set(0, 1.8, -3.8);
+      scene.add(hearthLight);
+
+      // Build 3D Architectural Architecture & Rooms
+      buildArchitecturalModel();
+
+      // Setup Hotspots
+      updateHotspots();
+
+      // Listeners
+      window.addEventListener('resize', onWindowResize);
+      setupControls(canvas);
+    }
+
+    // Material Helpers
+    function makeMat(color, roughness = 0.6, metalness = 0.1) {
+      return new THREE.MeshStandardMaterial({
+        color: color,
+        roughness: roughness,
+        metalness: metalness
+      });
+    }
+
+    function buildArchitecturalModel() {
+      roomGroup = new THREE.Group();
+      scene.add(roomGroup);
+
+      const timberMat = makeMat(0x6e4525, 0.75, 0.05); // Wood flooring
+      const wallMat = makeMat(0xd8e0d9, 0.9, 0.0);    // Warm off-white walls
+      const ceilingMat = makeMat(0xf0ede6, 0.95, 0.0); // Ceilings
+      const stoneMat = makeMat(0x4a4f4c, 0.85, 0.1);  // Fireplace / stone
+      const accentMat = makeMat(0x243e32, 0.8, 0.2); // Green accent wall
+      const glassMat = new THREE.MeshPhysicalMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0.35,
+        roughness: 0.1,
+        transmission: 0.8,
+        thickness: 0.5
+      });
+      const marbleMat = makeMat(0xe8ece9, 0.25, 0.3); // Kitchen quartz
+      const furnitureMat = makeMat(0x2b3831, 0.8, 0.1); // Charcoal sofa
+      const goldMat = makeMat(0xe8b04a, 0.3, 0.8);    // Gold fixtures
+
+      // ==========================================
+      // 1. GREAT LIVING ROOM (Center: 0, 0, 0)
+      // ==========================================
+      const lrFloorGeo = new THREE.PlaneGeometry(12, 12);
+      const lrFloor = new THREE.Mesh(lrFloorGeo, timberMat);
+      lrFloor.rotation.x = -Math.PI / 2;
+      lrFloor.receiveShadow = true;
+      roomGroup.add(lrFloor);
+
+      const lrCeilingGeo = new THREE.PlaneGeometry(12, 12);
+      const lrCeiling = new THREE.Mesh(lrCeilingGeo, ceilingMat);
+      lrCeiling.position.y = 5.2;
+      lrCeiling.rotation.x = Math.PI / 2;
+      roomGroup.add(lrCeiling);
+
+      // Beams across ceiling
+      for (let b = -4; b <= 4; b += 2.5) {
+        const beamGeo = new THREE.BoxGeometry(0.35, 0.45, 12);
+        const beam = new THREE.Mesh(beamGeo, timberMat);
+        beam.position.set(b, 5.0, 0);
+        roomGroup.add(beam);
+      }
+
+      // Fireplace Feature Wall (North: z = -6)
+      const fpWall = new THREE.Mesh(new THREE.BoxGeometry(12, 5.2, 0.4), wallMat);
+      fpWall.position.set(0, 2.6, -6);
+      roomGroup.add(fpWall);
+
+      const fpStone = new THREE.Mesh(new THREE.BoxGeometry(4.2, 5.2, 0.8), stoneMat);
+      fpStone.position.set(0, 2.6, -5.7);
+      roomGroup.add(fpStone);
+
+      const mantel = new THREE.Mesh(new THREE.BoxGeometry(4.8, 0.25, 0.8), timberMat);
+      mantel.position.set(0, 2.4, -5.3);
+      roomGroup.add(mantel);
+
+      // Fireplace Hearth Cavity
+      const fireHearth = new THREE.Mesh(new THREE.BoxGeometry(2.4, 1.4, 0.6), makeMat(0x1a1a1a, 0.9));
+      fireHearth.position.set(0, 0.9, -5.4);
+      roomGroup.add(fireHearth);
+
+      // Glowing Embers
+      const emberMesh = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.2, 0.4), new THREE.MeshBasicMaterial({ color: 0xff6b1a }));
+      emberMesh.position.set(0, 0.4, -5.3);
+      roomGroup.add(emberMesh);
+
+      // Living Room Sofa & Rug
+      const rugGeo = new THREE.PlaneGeometry(6, 4.5);
+      const rug = new THREE.Mesh(rugGeo, makeMat(0xcfc4b6, 0.95));
+      rug.rotation.x = -Math.PI / 2;
+      rug.position.set(0, 0.02, 0.5);
+      roomGroup.add(rug);
+
+      const sofaBase = new THREE.Mesh(new THREE.BoxGeometry(4.2, 0.65, 1.8), furnitureMat);
+      sofaBase.position.set(0, 0.35, 1.5);
+      roomGroup.add(sofaBase);
+
+      const sofaBack = new THREE.Mesh(new THREE.BoxGeometry(4.2, 1.1, 0.5), furnitureMat);
+      sofaBack.position.set(0, 0.9, 2.2);
+      roomGroup.add(sofaBack);
+
+      const coffeeTable = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.4, 1.2), timberMat);
+      coffeeTable.position.set(0, 0.2, -0.6);
+      roomGroup.add(coffeeTable);
+
+      // ==========================================
+      // 2. GOURMET KITCHEN (East: x = 6 to 14)
+      // ==========================================
+      const kFloorGeo = new THREE.PlaneGeometry(8, 12);
+      const kFloor = new THREE.Mesh(kFloorGeo, makeMat(0xd5ddd7, 0.3, 0.1)); // Porcelain Tile
+      kFloor.rotation.x = -Math.PI / 2;
+      kFloor.position.set(10, 0, 0);
+      roomGroup.add(kFloor);
+
+      const kCeiling = new THREE.Mesh(kFloorGeo, ceilingMat);
+      kCeiling.position.set(10, 5.2, 0);
+      kCeiling.rotation.x = Math.PI / 2;
+      roomGroup.add(kCeiling);
+
+      // Back Kitchen Wall
+      const kWall = new THREE.Mesh(new THREE.BoxGeometry(8, 5.2, 0.4), accentMat);
+      kWall.position.set(10, 2.6, -6);
+      roomGroup.add(kWall);
+
+      // Cabinet Counter Run
+      const kCounters = new THREE.Mesh(new THREE.BoxGeometry(7.6, 1.0, 1.2), makeMat(0x192721, 0.7));
+      kCounters.position.set(10, 0.5, -5.3);
+      roomGroup.add(kCounters);
+
+      const kCounterTop = new THREE.Mesh(new THREE.BoxGeometry(7.8, 0.15, 1.3), marbleMat);
+      kCounterTop.position.set(10, 1.05, -5.3);
+      roomGroup.add(kCounterTop);
+
+      // Central Waterfall Island
+      const islandBase = new THREE.Mesh(new THREE.BoxGeometry(4.2, 1.0, 2.0), makeMat(0x192721, 0.7));
+      islandBase.position.set(9.5, 0.5, -0.8);
+      roomGroup.add(islandBase);
+
+      const islandTop = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.18, 2.2), marbleMat);
+      islandTop.position.set(9.5, 1.08, -0.8);
+      roomGroup.add(islandTop);
+
+      // Pendant Lights over Island
+      for (let px of [8.2, 9.5, 10.8]) {
+        const cord = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 1.8), makeMat(0x111111));
+        cord.position.set(px, 4.2, -0.8);
+        roomGroup.add(cord);
+
+        const shade = new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.35, 16, 1, true), goldMat);
+        shade.position.set(px, 3.2, -0.8);
+        roomGroup.add(shade);
+
+        const pLight = new THREE.PointLight(0xffe6a3, 1.0, 5);
+        pLight.position.set(px, 3.0, -0.8);
+        roomGroup.add(pLight);
+      }
+
+      // ==========================================
+      // 3. MASTER SUITE (West: x = -6 to -14)
+      // ==========================================
+      const mbFloor = new THREE.Mesh(new THREE.PlaneGeometry(8, 12), timberMat);
+      mbFloor.rotation.x = -Math.PI / 2;
+      mbFloor.position.set(-10, 0, 0);
+      roomGroup.add(mbFloor);
+
+      const mbWall = new THREE.Mesh(new THREE.BoxGeometry(8, 5.2, 0.4), makeMat(0x283b32));
+      mbWall.position.set(-10, 2.6, -6);
+      roomGroup.add(mbWall);
+
+      // King Bed
+      const bedFrame = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.5, 4.0), timberMat);
+      bedFrame.position.set(-10, 0.3, -3.2);
+      roomGroup.add(bedFrame);
+
+      const mattress = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.5, 3.8), makeMat(0xf0ede6, 0.95));
+      mattress.position.set(-10, 0.65, -3.2);
+      roomGroup.add(mattress);
+
+      const headboard = new THREE.Mesh(new THREE.BoxGeometry(3.8, 2.0, 0.3), makeMat(0x1e2e26, 0.9));
+      headboard.position.set(-10, 1.4, -5.2);
+      roomGroup.add(headboard);
+
+      // Nightstands
+      for (let nx of [-12.2, -7.8]) {
+        const stand = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.7, 0.9), timberMat);
+        stand.position.set(nx, 0.35, -4.6);
+        roomGroup.add(stand);
+
+        const lamp = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.28, 0.5), goldMat);
+        lamp.position.set(nx, 0.95, -4.6);
+        roomGroup.add(lamp);
+
+        const lampLight = new THREE.PointLight(0xffda91, 0.9, 4);
+        lampLight.position.set(nx, 1.2, -4.6);
+        roomGroup.add(lampLight);
+      }
+
+      // ==========================================
+      // 4. SPA BATHROOM (North-West: -4.5, y, -9)
+      // ==========================================
+      const bathFloor = new THREE.Mesh(new THREE.PlaneGeometry(6, 6), makeMat(0xeef2ef, 0.2, 0.2));
+      bathFloor.rotation.x = -Math.PI / 2;
+      bathFloor.position.set(-4.5, 0, -9);
+      roomGroup.add(bathFloor);
+
+      // Tub
+      const tub = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 0.75, 0.9, 24), makeMat(0xffffff, 0.1, 0.1));
+      tub.scale.set(1.4, 1.0, 1.0);
+      tub.position.set(-4.5, 0.45, -10.2);
+      roomGroup.add(tub);
+
+      // ==========================================
+      // 5. LOWER LEVEL / BASEMENT DEN (y = -5)
+      // ==========================================
+      const bsmtFloor = new THREE.Mesh(new THREE.PlaneGeometry(16, 12), makeMat(0x353a38, 0.95)); // Polished concrete
+      bsmtFloor.rotation.x = -Math.PI / 2;
+      bsmtFloor.position.set(0, -5.5, 0);
+      roomGroup.add(bsmtFloor);
+
+      const bsmtWall = new THREE.Mesh(new THREE.BoxGeometry(16, 4.2, 0.4), makeMat(0x232c28, 0.9));
+      bsmtWall.position.set(0, -3.4, -6);
+      roomGroup.add(bsmtWall);
+
+      // Theater Screen
+      const screenMesh = new THREE.Mesh(new THREE.BoxGeometry(6.5, 3.2, 0.1), new THREE.MeshBasicMaterial({ color: 0x050c18 }));
+      screenMesh.position.set(0, -3.4, -5.75);
+      roomGroup.add(screenMesh);
+
+      // Billiards Table
+      const poolTable = new THREE.Mesh(new THREE.BoxGeometry(4.0, 0.8, 2.2), timberMat);
+      poolTable.position.set(4.0, -5.1, 0.5);
+      roomGroup.add(poolTable);
+
+      const felt = new THREE.Mesh(new THREE.BoxGeometry(3.7, 0.1, 1.9), makeMat(0x175c3b, 0.9));
+      felt.position.set(4.0, -4.68, 0.5);
+      roomGroup.add(felt);
+
+      // ==========================================
+      // 6. GARAGE WING (East Wing: x = 12, z = 6)
+      // ==========================================
+      const garFloor = new THREE.Mesh(new THREE.PlaneGeometry(8, 10), makeMat(0x404442, 0.4, 0.3));
+      garFloor.rotation.x = -Math.PI / 2;
+      garFloor.position.set(12, 0, 6);
+      roomGroup.add(garFloor);
+
+      const garDoor = new THREE.Mesh(new THREE.BoxGeometry(7.2, 3.6, 0.2), makeMat(0x18241d, 0.8));
+      garDoor.position.set(12, 1.8, 11);
+      roomGroup.add(garDoor);
+
+      // Car Representation
+      const carBody = new THREE.Mesh(new THREE.BoxGeometry(2.4, 1.1, 4.5), makeMat(0x1e3a5f, 0.2, 0.8));
+      carBody.position.set(11, 0.7, 6);
+      roomGroup.add(carBody);
+
+      // ==========================================
+      // 7. EXTERIOR PATIO DECK & LAWN (South: z = 8 to 20)
+      // ==========================================
+      const deckGeo = new THREE.PlaneGeometry(16, 8);
+      const deck = new THREE.Mesh(deckGeo, timberMat);
+      deck.rotation.x = -Math.PI / 2;
+      deck.position.set(0, -0.05, 10);
+      roomGroup.add(deck);
+
+      const lawnGeo = new THREE.PlaneGeometry(60, 50);
+      const lawn = new THREE.Mesh(lawnGeo, makeMat(0x162c1e, 0.95));
+      lawn.rotation.x = -Math.PI / 2;
+      lawn.position.set(0, -0.1, 24);
+      roomGroup.add(lawn);
+
+      // Garden Trees
+      for (let t = 0; t < 6; t++) {
+        const treeX = -18 + t * 7;
+        const treeZ = 20 + (t % 2) * 5;
+        const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.35, 4), timberMat);
+        trunk.position.set(treeX, 2, treeZ);
+        roomGroup.add(trunk);
+
+        const foliage = new THREE.Mesh(new THREE.ConeGeometry(1.8, 4.5, 8), makeMat(0x1f422b, 0.9));
+        foliage.position.set(treeX, 5, treeZ);
+        roomGroup.add(foliage);
+      }
+    }
+
+    // Switch Room
+    function navigateToRoom(roomKey) {
+      if (!ROOMS[roomKey]) return;
+      activeRoomKey = roomKey;
+      const r = ROOMS[roomKey];
+
+      // Update HUD
+      document.getElementById('toastRoomName').textContent = r.name;
+      document.getElementById('minimapFloorLabel').textContent = r.level;
+
+      // Update Navigation Pills
+      document.querySelectorAll('.room-pill').forEach(btn => btn.classList.remove('active'));
+      const pill = document.getElementById('pill-' + roomKey);
+      if (pill) pill.classList.add('active');
+
+      // Update Mini-map Highlight
+      document.querySelectorAll('.minimap-room').forEach(rm => rm.classList.remove('active'));
+      const mmEl = document.getElementById('mm-' + roomKey);
+      if (mmEl) mmEl.classList.add('active');
+
+      // Update Radar position
+      const dot = document.getElementById('radarDot');
+      if (dot && r.radar) {
+        dot.setAttribute('cx', r.radar.cx);
+        dot.setAttribute('cy', r.radar.cy);
+      }
+
+      // Smooth camera transition
+      targetCamPos = { ...r.camPos };
+      targetLookAt = { ...r.lookAt };
+      cameraYaw = 0;
+      cameraPitch = 0;
+
+      // Re-populate hotspots
+      updateHotspots();
+    }
+
+    // Interactive Hotspot Pins
+    function updateHotspots() {
+      const layer = document.getElementById('hotspot-layer');
+      layer.innerHTML = '';
+
+      const r = ROOMS[activeRoomKey];
+      if (!r || !r.hotspots) return;
+
+      r.hotspots.forEach((hs, idx) => {
+        const div = document.createElement('div');
+        div.className = 'hotspot';
+        div.id = 'hotspot-' + idx;
+        div.innerHTML = `
+          <div class="hotspot-ring">
+            <i class="fa-solid fa-plus"></i>
+          </div>
+          <div class="hotspot-tooltip">
+            <div style="font-weight:700; color:var(--hearth-gold); margin-bottom:2px;">${hs.title}</div>
+            <div style="font-size:11px; color:#cbd5e1; line-height:1.4;">${hs.detail}</div>
+          </div>
+        `;
+        layer.appendChild(div);
+      });
+    }
+
+    function projectHotspots() {
+      const r = ROOMS[activeRoomKey];
+      if (!r || !r.hotspots) return;
+
+      r.hotspots.forEach((hs, idx) => {
+        const el = document.getElementById('hotspot-' + idx);
+        if (!el) return;
+
+        const v = new THREE.Vector3(hs.pos.x, hs.pos.y, hs.pos.z);
+        v.project(camera);
+
+        // Check if behind camera
+        if (v.z > 1.0) {
+          el.style.display = 'none';
+          return;
+        }
+
+        const x = (v.x * 0.5 + 0.5) * window.innerWidth;
+        const y = (-v.y * 0.5 + 0.5) * window.innerHeight;
+
+        el.style.display = 'block';
+        el.style.left = x + 'px';
+        el.style.top = y + 'px';
+      });
+    }
+
+    // Day / Night Switch
+    function toggleDayNight() {
+      isNightMode = !isNightMode;
+      const icon = document.getElementById('lightingIcon');
+      const btn = document.getElementById('btnLighting');
+
+      if (isNightMode) {
+        icon.className = 'fa-solid fa-moon';
+        btn.classList.remove('active');
+        scene.background = new THREE.Color(0x0c1510);
+        scene.fog.color = new THREE.Color(0x0c1510);
+        ambientLight.intensity = 0.55;
+        sunLight.intensity = 0.8;
+        hearthLight.intensity = 2.4;
+      } else {
+        icon.className = 'fa-solid fa-sun';
+        btn.classList.add('active');
+        scene.background = new THREE.Color(0x87ceeb);
+        scene.fog.color = new THREE.Color(0x87ceeb);
+        ambientLight.intensity = 1.1;
+        sunLight.intensity = 2.0;
+        hearthLight.intensity = 1.0;
+      }
+    }
+
+    function toggleAutoTour() {
+      autoSpin = !autoSpin;
+      document.getElementById('btnAutoSpin').classList.toggle('active', autoSpin);
+    }
+
+    function resetCurrentRoomView() {
+      const r = ROOMS[activeRoomKey];
+      targetCamPos = { ...r.camPos };
+      targetLookAt = { ...r.lookAt };
+      cameraYaw = 0;
+      cameraPitch = 0;
+    }
+
+    // Controls: Drag to look around
+    function setupControls(canvas) {
+      canvas.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        prevMouseX = e.clientX;
+        prevMouseY = e.clientY;
+      });
+
+      window.addEventListener('mouseup', () => { isDragging = false; });
+
+      canvas.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        const deltaX = e.clientX - prevMouseX;
+        const deltaY = e.clientY - prevMouseY;
+        prevMouseX = e.clientX;
+        prevMouseY = e.clientY;
+
+        cameraYaw -= deltaX * 0.0035;
+        cameraPitch -= deltaY * 0.003;
+        cameraPitch = Math.max(-0.6, Math.min(0.6, cameraPitch));
+      });
+
+      // Touch events for mobile/tablet
+      canvas.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 1) {
+          isDragging = true;
+          prevMouseX = e.touches[0].clientX;
+          prevMouseY = e.touches[0].clientY;
+        }
+      }, { passive: true });
+
+      window.addEventListener('touchend', () => { isDragging = false; });
+
+      canvas.addEventListener('touchmove', (e) => {
+        if (!isDragging || e.touches.length !== 1) return;
+        const deltaX = e.touches[0].clientX - prevMouseX;
+        const deltaY = e.touches[0].clientY - prevMouseY;
+        prevMouseX = e.touches[0].clientX;
+        prevMouseY = e.touches[0].clientY;
+
+        cameraYaw -= deltaX * 0.004;
+        cameraPitch -= deltaY * 0.0035;
+        cameraPitch = Math.max(-0.6, Math.min(0.6, cameraPitch));
+      }, { passive: true });
+    }
+
+    function onWindowResize() {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    // Animation Loop
+    let clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const delta = clock.getDelta();
+
+      // Smooth camera position lerp
+      camera.position.x += (targetCamPos.x - camera.position.x) * 0.05;
+      camera.position.y += (targetCamPos.y - camera.position.y) * 0.05;
+      camera.position.z += (targetCamPos.z - camera.position.z) * 0.05;
+
+      // Auto spin
+      if (autoSpin) {
+        cameraYaw += 0.005;
+      }
+
+      // Compute look direction based on targetLookAt + yaw/pitch
+      const dx = targetLookAt.x - targetCamPos.x;
+      const dz = targetLookAt.z - targetCamPos.z;
+      const baseAngle = Math.atan2(dx, dz);
+
+      const lookDist = 8.0;
+      const effectiveYaw = baseAngle + cameraYaw;
+
+      const destLookX = camera.position.x + Math.sin(effectiveYaw) * Math.cos(cameraPitch) * lookDist;
+      const destLookY = camera.position.y + Math.sin(cameraPitch) * lookDist;
+      const destLookZ = camera.position.z + Math.cos(effectiveYaw) * Math.cos(cameraPitch) * lookDist;
+
+      currentLookAt.x += (destLookX - currentLookAt.x) * 0.08;
+      currentLookAt.y += (destLookY - currentLookAt.y) * 0.08;
+      currentLookAt.z += (destLookZ - currentLookAt.z) * 0.08;
+
+      camera.lookAt(currentLookAt.x, currentLookAt.y, currentLookAt.z);
+
+      // Flickering hearth fire light
+      if (hearthLight) {
+        hearthLight.intensity = (isNightMode ? 2.2 : 1.0) + Math.sin(Date.now() * 0.009) * 0.35 + Math.cos(Date.now() * 0.021) * 0.2;
+      }
+
+      renderer.render(scene, camera);
+      projectHotspots();
+    }
+
+    if (document.readyState === 'loading') {
+      window.addEventListener('DOMContentLoaded', () => {
+        init3DTour();
+        animate();
+      });
+    } else {
+      init3DTour();
+      animate();
+    }
+  </script>
+</body>
+</html>

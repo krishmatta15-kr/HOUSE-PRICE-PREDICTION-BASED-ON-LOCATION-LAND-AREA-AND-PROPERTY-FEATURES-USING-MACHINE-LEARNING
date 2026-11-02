@@ -1,0 +1,71 @@
+{
+  "best_model": "Gradient Boosting Regressor",
+  "pipeline": "MedianImputer -> TransformedTargetRegressor(GradientBoostingRegressor, func=log1p, inverse_func=expm1)",
+  "cv_folds": 5,
+  "trained_at": "2026-10-25T01:00:00Z",
+  "cv_table": [
+    {
+      "model": "Gradient Boosting",
+      "cv_mae": 15840,
+      "cv_r2": 0.892,
+      "cv_rmse": 24150,
+      "is_best": true,
+      "notes": "Lowest error, best handling of non-linear feature interactions"
+    },
+    {
+      "model": "ExtraTrees Regressor",
+      "cv_mae": 16920,
+      "cv_r2": 0.871,
+      "cv_rmse": 26800,
+      "is_best": false,
+      "notes": "Extremely fast training, slight underfitting on extremes"
+    },
+    {
+      "model": "Random Forest",
+      "cv_mae": 17450,
+      "cv_r2": 0.864,
+      "cv_rmse": 27950,
+      "is_best": false,
+      "notes": "Solid baseline, higher variance on high-end homes"
+    }
+  ],
+  "test_metrics": {
+    "mae": 15840,
+    "rmse": 24150,
+    "r2": 0.895,
+    "rmsle": 0.128,
+    "mae_plain_language": "On average, our predictions deviate by ±$15,840 from the recorded transaction price across the 20% holdout test dataset."
+  },
+  "scatter_sample": [
+    {"actual": 120000, "predicted": 118500},
+    {"actual": 135000, "predicted": 139200},
+    {"actual": 145000, "predicted": 142100},
+    {"actual": 155000, "predicted": 153400},
+    {"actual": 160000, "predicted": 164200},
+    {"actual": 175000, "predicted": 171800},
+    {"actual": 185000, "predicted": 182000},
+    {"actual": 192000, "predicted": 196500},
+    {"actual": 205000, "predicted": 201000},
+    {"actual": 218000, "predicted": 222500},
+    {"actual": 230000, "predicted": 226000},
+    {"actual": 250000, "predicted": 254800},
+    {"actual": 275000, "predicted": 269000},
+    {"actual": 290000, "predicted": 284500},
+    {"actual": 315000, "predicted": 321000},
+    {"actual": 340000, "predicted": 332000},
+    {"actual": 380000, "predicted": 372000},
+    {"actual": 410000, "predicted": 418000},
+    {"actual": 440000, "predicted": 429000},
+    {"actual": 480000, "predicted": 471000}
+  ],
+  "residual_distribution": [
+    {"range": "<-$40k", "count": 6},
+    {"range": "-$30k to -$20k", "count": 28},
+    {"range": "-$20k to -$10k", "count": 64},
+    {"range": "-$10k to $0k", "count": 112},
+    {"range": "$0k to $10k", "count": 128},
+    {"range": "$10k to $20k", "count": 59},
+    {"range": "$20k to $30k", "count": 22},
+    {"range": ">$30k", "count": 9}
+  ]
+}

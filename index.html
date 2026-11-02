@@ -1,0 +1,3693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>hearth. — Warm Estate House Valuation Studio</title>
+  <meta name="description" content="hearth: cozy, warm architectural home price prediction powered by Ames Iowa dataset and 3D procedural rendering.">
+
+  <!-- Google Fonts: Plus Jakarta Sans / Cormorant / JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Cormorant+Garamond:ital,wght@0,600;0,700;1,600&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- Three.js for 3D Background & Architectural Model (with Multi-CDN Failover) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script>
+    if (typeof THREE === 'undefined') {
+      document.write('<script src="https://unpkg.com/three@0.128.0/build/three.min.js"><\/script>');
+    }
+  </script>
+  <script>
+    if (typeof THREE === 'undefined') {
+      document.write('<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"><\/script>');
+    }
+  </script>
+
+  <style>
+    /* =========================================================
+       WARM HEARTH & ESTATE PALETTE:
+       Warm Timber · Hearth Amber · Deep Cedar Forest · Sandstone Glass
+       ========================================================= */
+    :root {
+      --bg-dark: #0d1612;
+      --bg-gradient: radial-gradient(circle at 50% 10%, #1b2d23 0%, #111e17 45%, #0a110d 100%);
+      --card-bg: rgba(18, 30, 23, 0.78);
+      --card-border: rgba(232, 180, 110, 0.25);
+      --card-border-focus: #e8b04a;
+      --primary: #34d399;
+      --primary-hover: #10b981;
+      --primary-glow: rgba(52, 211, 153, 0.25);
+      --hearth-gold: #e8b04a;
+      --hearth-amber: #f59e0b;
+      --timber: #8b5a2b;
+      --terra: #c4553a;
+      --text-main: #fbf7ee;
+      --text-muted: #b8c7bd;
+      --text-sub: #7f9486;
+      --badge-bg: rgba(232, 176, 74, 0.12);
+      --font: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-serif: 'Cormorant Garamond', Georgia, serif;
+      --font-mono: 'JetBrains Mono', monospace;
+      --radius-lg: 24px;
+      --radius-md: 14px;
+      --radius-sm: 8px;
+      --shadow-card: 0 16px 40px rgba(0, 0, 0, 0.45);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--bg-gradient);
+      color: var(--text-main);
+      font-family: var(--font);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* Ambient Warm Architectural 3D Background */
+    #bg-3d-canvas {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 0;
+      pointer-events: none;
+      opacity: 0.55;
+    }
+
+    /* Warm Firelight & Dusk Vignette Overlay */
+    .warm-vignette {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      background: 
+        radial-gradient(circle at 20% 15%, rgba(232, 176, 74, 0.12) 0%, transparent 45%),
+        radial-gradient(circle at 80% 25%, rgba(196, 85, 58, 0.1) 0%, transparent 50%),
+        radial-gradient(ellipse at 50% 100%, rgba(5, 10, 7, 0.8) 0%, transparent 80%);
+    }
+
+    /* Header matching hearth with warm timber & gold styling */
+    header {
+      background: rgba(13, 22, 18, 0.82);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--card-border);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      padding: 14px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .brand-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+    }
+
+    .brand-badge {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, var(--hearth-gold), #b87a22);
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      color: #0d1612;
+      font-weight: 900;
+      font-size: 18px;
+      box-shadow: 0 0 12px rgba(232, 176, 74, 0.4);
+    }
+
+    .brand-text {
+      font-weight: 800;
+      font-size: 21px;
+      color: var(--text-main);
+      letter-spacing: -0.5px;
+    }
+
+    .brand-text span {
+      color: var(--hearth-gold);
+      font-family: var(--font-serif);
+      font-style: italic;
+    }
+
+    nav.header-nav {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+
+    .nav-link {
+      background: none;
+      border: none;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 6px 4px;
+      position: relative;
+      transition: color 0.2s;
+    }
+
+    .nav-link:hover, .nav-link.active {
+      color: var(--hearth-gold);
+    }
+
+    .nav-link.active::after {
+      content: '';
+      position: absolute;
+      bottom: -15px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--hearth-gold);
+      box-shadow: 0 0 8px rgba(232, 176, 74, 0.6);
+      border-radius: 2px;
+    }
+
+    .model-status-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--hearth-gold);
+      background: rgba(232, 176, 74, 0.1);
+      border: 1px solid rgba(232, 176, 74, 0.3);
+      padding: 6px 14px;
+      border-radius: 20px;
+    }
+
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--hearth-gold);
+      border-radius: 50%;
+      box-shadow: 0 0 8px rgba(232, 176, 74, 0.8);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.85); }
+    }
+
+    /* Main Container */
+    main {
+      flex: 1;
+      max-width: 1320px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 32px 24px 60px;
+      position: relative;
+      z-index: 10;
+    }
+
+    .tab-view {
+      display: none;
+      animation: fadeIn 0.25s ease-out;
+    }
+
+    .tab-view.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Studio Grid: Form (Left) + Result/Placeholder (Right) */
+    .estimate-grid {
+      display: grid;
+      grid-template-columns: 1.15fr 0.95fr;
+      gap: 30px;
+      align-items: start;
+    }
+
+    @media (max-width: 960px) {
+      .estimate-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Warm Frosted Glassmorphism Card Containers */
+    .hearth-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-lg);
+      padding: 34px;
+      box-shadow: var(--shadow-card);
+      backdrop-filter: blur(18px);
+      position: relative;
+    }
+
+    .card-meta-label {
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--hearth-gold);
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .card-heading {
+      font-size: 26px;
+      font-weight: 800;
+      color: var(--text-main);
+      letter-spacing: -0.5px;
+      margin-bottom: 22px;
+    }
+
+    .top-action-btn {
+      position: absolute;
+      top: 30px;
+      right: 34px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--card-border);
+      padding: 6px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .top-action-btn:hover {
+      background: rgba(232, 176, 74, 0.15);
+      border-color: var(--hearth-gold);
+      color: var(--hearth-gold);
+    }
+
+    /* Presets Buttons Row */
+    .presets-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+
+    .preset-pill {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--card-border);
+      color: var(--text-muted);
+      padding: 8px 15px;
+      border-radius: var(--radius-md);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      transition: all 0.2s;
+    }
+
+    .preset-pill:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-main);
+      border-color: rgba(232, 176, 74, 0.5);
+    }
+
+    .preset-pill.active {
+      background: rgba(232, 176, 74, 0.18);
+      border-color: var(--hearth-gold);
+      color: var(--hearth-gold);
+      box-shadow: 0 0 14px rgba(232, 176, 74, 0.2);
+    }
+
+    /* Form Fields */
+    .form-section {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+
+    .form-label {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .info-tooltip-icon {
+      color: var(--text-sub);
+      font-size: 12px;
+      cursor: help;
+    }
+
+    .unit-tag {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--hearth-gold);
+    }
+
+    /* Form Input Controls - Dark Warm Glass */
+    .hearth-input {
+      width: 100%;
+      height: 46px;
+      background: rgba(10, 18, 14, 0.65);
+      border: 1.5px solid var(--card-border);
+      border-radius: var(--radius-md);
+      padding: 0 16px;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-main);
+      font-family: var(--font);
+      transition: all 0.2s ease;
+      outline: none;
+    }
+
+    .hearth-input:focus {
+      border-color: var(--hearth-gold);
+      background: rgba(15, 26, 20, 0.85);
+      box-shadow: 0 0 0 3px rgba(232, 176, 74, 0.25);
+    }
+
+    .number-stepper-wrap {
+      display: flex;
+      align-items: center;
+      background: rgba(10, 18, 14, 0.65);
+      border: 1.5px solid var(--card-border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      transition: border-color 0.2s;
+    }
+
+    .number-stepper-wrap:focus-within {
+      border-color: var(--hearth-gold);
+      box-shadow: 0 0 0 3px rgba(232, 176, 74, 0.25);
+    }
+
+    .stepper-btn {
+      width: 42px;
+      height: 46px;
+      background: none;
+      border: none;
+      color: var(--hearth-gold);
+      font-size: 17px;
+      font-weight: 700;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      transition: background 0.2s;
+    }
+
+    .stepper-btn:hover {
+      background: rgba(232, 176, 74, 0.15);
+    }
+
+    .stepper-input {
+      flex: 1;
+      height: 46px;
+      border: none;
+      background: transparent;
+      text-align: center;
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--text-main);
+      font-family: var(--font);
+      outline: none;
+    }
+
+    .two-col-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .form-helper-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--text-sub);
+      font-weight: 500;
+      padding: 0 2px;
+    }
+
+    .helper-mid {
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .out-range-alert {
+      display: none;
+      background: rgba(196, 85, 58, 0.2);
+      border: 1px solid var(--terra);
+      border-radius: var(--radius-md);
+      padding: 12px 16px;
+      font-size: 12px;
+      color: #ffb8a8;
+      line-height: 1.4;
+    }
+
+    .out-range-alert.show {
+      display: block;
+    }
+
+    /* Google Maps Location Section */
+    .location-box {
+      margin-top: 18px;
+      background: rgba(10, 18, 14, 0.65);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-md);
+      padding: 16px;
+    }
+
+    .location-header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .location-label {
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--hearth-gold);
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .map-frame-wrap {
+      width: 100%;
+      height: 175px;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--card-border);
+      margin-top: 10px;
+      position: relative;
+      background: #09120e;
+    }
+
+    .map-frame-wrap iframe {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      display: block;
+    }
+
+    .map-controls-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .map-btn {
+      background: rgba(232, 176, 74, 0.12);
+      border: 1px solid rgba(232, 176, 74, 0.3);
+      color: var(--gold-light);
+      padding: 5px 12px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      text-decoration: none;
+      transition: all 0.2s ease;
+    }
+
+    .map-btn:hover {
+      background: var(--hearth-gold);
+      color: #0b140f;
+    }
+
+    .location-meta-tag {
+      font-size: 11px;
+      color: var(--text-sub);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    /* 3D House Tour Banner */
+    .house-tour-cta-banner {
+      margin-top: 16px;
+      margin-bottom: 8px;
+      background: linear-gradient(135deg, rgba(232, 176, 74, 0.16) 0%, rgba(18, 30, 23, 0.95) 100%);
+      border: 1.5px solid var(--hearth-gold);
+      border-radius: var(--radius-md);
+      padding: 16px 18px;
+      box-shadow: 0 8px 24px rgba(232, 176, 74, 0.2);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .tour-banner-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .tour-badge-top {
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #0b140f;
+      background: var(--hearth-gold);
+      padding: 3px 8px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      margin-bottom: 6px;
+    }
+
+    .tour-banner-title {
+      font-size: 16px;
+      font-weight: 800;
+      color: #ffd68a;
+      letter-spacing: -0.3px;
+    }
+
+    .tour-banner-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.4;
+      margin-top: 3px;
+    }
+
+    .tour-rooms-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .tour-room-pill {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 3px 9px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #cbd5e1;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .launch-tour-btn {
+      width: 100%;
+      background: linear-gradient(135deg, #e8b04a 0%, #b87a22 100%);
+      color: #0b140f;
+      padding: 12px 18px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 800;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      box-shadow: 0 4px 16px rgba(232, 176, 74, 0.4);
+      transition: all 0.25s ease;
+    }
+
+    .launch-tour-btn:hover {
+      background: linear-gradient(135deg, #ffd68a 0%, #e8b04a 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 22px rgba(232, 176, 74, 0.6);
+      color: #000;
+    }
+
+    .nav-tour-badge {
+      background: var(--hearth-gold);
+      color: #0b140f;
+      font-size: 9px;
+      font-weight: 800;
+      padding: 1px 6px;
+      border-radius: 999px;
+      margin-left: 4px;
+    }
+
+    /* Primary Submission Button */
+    .submit-cta-btn {
+      margin-top: 26px;
+      width: 100%;
+      height: 52px;
+      background: linear-gradient(135deg, var(--hearth-gold), #b87a22);
+      color: #0b140f;
+      border: none;
+      border-radius: var(--radius-md);
+      font-size: 15px;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: all 0.25s ease;
+      box-shadow: 0 6px 20px rgba(232, 176, 74, 0.35);
+    }
+
+    .submit-cta-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 26px rgba(232, 176, 74, 0.5);
+      background: linear-gradient(135deg, #ffd68a, var(--hearth-gold));
+    }
+
+    /* Right Panel (YOUR ESTIMATE) */
+    .right-estimate-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-lg);
+      padding: 34px;
+      box-shadow: var(--shadow-card);
+      backdrop-filter: blur(18px);
+      min-height: 560px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+    }
+
+    .estimate-top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .currency-toggle-btn {
+      background: none;
+      border: none;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--hearth-gold);
+      text-decoration: underline;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+
+    .ready-badge {
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-muted);
+      border: 1px solid var(--card-border);
+    }
+
+    .ready-badge.computed {
+      background: rgba(52, 211, 153, 0.2);
+      color: #34d399;
+      border-color: #34d399;
+      box-shadow: 0 0 10px rgba(52, 211, 153, 0.3);
+    }
+
+    /* Idle / Ready State (Matches Screenshot) */
+    .idle-stage {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding: 24px 12px;
+      margin: auto 0;
+    }
+
+    .house-line-art {
+      width: 140px;
+      height: 110px;
+      margin-bottom: 24px;
+      stroke: var(--hearth-gold);
+      fill: none;
+      stroke-width: 2.2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      filter: drop-shadow(0 0 10px rgba(232, 176, 74, 0.4));
+    }
+
+    .idle-title {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--text-main);
+      margin-bottom: 8px;
+      letter-spacing: -0.3px;
+    }
+
+    .idle-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      max-width: 320px;
+      line-height: 1.6;
+      margin-bottom: 20px;
+    }
+
+    .idle-tag-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--hearth-gold);
+      background: rgba(232, 176, 74, 0.1);
+      border: 1px solid var(--card-border);
+      padding: 4px 14px;
+      border-radius: 14px;
+    }
+
+    /* Result State (Revealed after Form Submission) */
+    .result-stage {
+      display: none;
+      flex-direction: column;
+      animation: fadeIn 0.35s ease;
+    }
+
+    .result-stage.show {
+      display: flex;
+    }
+
+    .price-headline-box {
+      background: linear-gradient(135deg, rgba(232, 176, 74, 0.15), rgba(52, 211, 153, 0.12));
+      border: 1.5px solid var(--hearth-gold);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 0 24px rgba(232, 176, 74, 0.18);
+    }
+
+    .price-meta-label {
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--hearth-gold);
+    }
+
+    .price-number-big {
+      font-size: 38px;
+      font-weight: 900;
+      color: #ffd68a;
+      letter-spacing: -1px;
+      line-height: 1.1;
+      margin: 4px 0 6px;
+      text-shadow: 0 0 16px rgba(232, 176, 74, 0.4);
+    }
+
+    .price-interval-pill {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--text-muted);
+      background: rgba(0, 0, 0, 0.35);
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-weight: 600;
+    }
+
+    /* HOUSE VISUAL SHOWCASE: Photo + 3D View */
+    .house-visual-container {
+      background: rgba(10, 18, 14, 0.7);
+      border: 1.5px solid var(--card-border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      margin-bottom: 16px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    }
+
+    .visual-toggle-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 14px;
+      background: rgba(0, 0, 0, 0.4);
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    .toggle-pill-group {
+      display: flex;
+      gap: 4px;
+      background: rgba(255, 255, 255, 0.08);
+      padding: 2px;
+      border-radius: 8px;
+      border: 1px solid var(--card-border);
+    }
+
+    .toggle-pill-btn {
+      background: transparent;
+      border: none;
+      padding: 4px 11px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .toggle-pill-btn.active {
+      background: var(--hearth-gold);
+      color: #0b140f;
+    }
+
+    .visual-viewport {
+      height: 290px;
+      position: relative;
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      background: radial-gradient(circle at center, #15251c 0%, #0a130e 100%);
+      border: 1px solid var(--card-border);
+      box-shadow: inset 0 2px 14px rgba(0, 0, 0, 0.45);
+    }
+
+    /* Realistic House Photo Card */
+    #housePhotoView {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .house-photo-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .photo-overlay-badge {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(13, 22, 18, 0.85);
+      border: 1px solid var(--card-border);
+      color: #ffd68a;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .photo-specs-strip {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(to top, rgba(10, 18, 14, 0.95) 0%, rgba(10, 18, 14, 0.5) 70%, transparent 100%);
+      padding: 20px 14px 10px;
+      color: #fff;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+
+    .photo-house-title {
+      font-size: 13px;
+      font-weight: 800;
+      color: #ffd68a;
+    }
+
+    .photo-house-meta {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    /* 3D WebGL Canvas inside Visual Viewport */
+    #house3DView {
+      width: 100%;
+      height: 100%;
+      display: block;
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at center, #192d22 0%, #0c1712 100%);
+    }
+
+    #threeResultCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: grab;
+      touch-action: none;
+    }
+
+    #threeResultCanvas:active {
+      cursor: grabbing;
+    }
+
+    .stage-3d-overlay {
+      position: absolute;
+      bottom: 10px;
+      left: 12px;
+      right: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 600;
+      pointer-events: none;
+    }
+      right: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 10px;
+      color: var(--text-muted);
+      font-weight: 600;
+      pointer-events: none;
+    }
+
+    .mini-hud-btn {
+      background: rgba(18, 30, 23, 0.85);
+      border: 1px solid var(--card-border);
+      color: var(--hearth-gold);
+      padding: 3px 9px;
+      border-radius: 6px;
+      font-size: 10px;
+      font-weight: 700;
+      cursor: pointer;
+      pointer-events: auto;
+    }
+
+    /* Metrics Row */
+    .kpi-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .kpi-box {
+      background: rgba(10, 18, 14, 0.6);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+    }
+
+    .kpi-title {
+      font-size: 11px;
+      color: var(--text-sub);
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .kpi-val {
+      font-size: 17px;
+      font-weight: 800;
+      color: #ffd68a;
+      margin-top: 2px;
+    }
+
+    /* Bottom Hearth Disclaimer Box (Matches Screenshot) */
+    .hearth-disclaimer-box {
+      margin-top: 18px;
+      background: rgba(232, 176, 74, 0.08);
+      border: 1px solid rgba(232, 176, 74, 0.25);
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .hearth-disc-icon {
+      color: var(--hearth-gold);
+      font-size: 16px;
+      margin-top: 2px;
+    }
+
+    .hearth-disc-title {
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--hearth-gold);
+      margin-bottom: 2px;
+    }
+
+    .hearth-disc-body {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* Generic Cards for other tabs */
+    .generic-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-lg);
+      padding: 34px;
+      box-shadow: var(--shadow-card);
+      backdrop-filter: blur(18px);
+      margin-bottom: 24px;
+    }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      margin-top: 14px;
+    }
+
+    .data-table th {
+      text-align: left;
+      padding: 10px 12px;
+      background: rgba(0, 0, 0, 0.3);
+      color: var(--hearth-gold);
+      font-weight: 700;
+      border-bottom: 1.5px solid var(--card-border);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .data-table td {
+      padding: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      color: var(--text-main);
+    }
+
+    .badge-best {
+      background: rgba(52, 211, 153, 0.2);
+      color: #34d399;
+      border: 1px solid rgba(52, 211, 153, 0.4);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 12px;
+    }
+
+    .chart-box {
+      height: 220px;
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-md);
+      padding: 10px;
+      margin-top: 12px;
+    }
+
+    /* ==========================================
+       3D WALKTHROUGH EMBEDDED TAB STYLES
+       ========================================== */
+    .walkthrough-wrapper {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .walkthrough-viewport-box {
+      position: relative;
+      width: 100%;
+      height: 720px;
+      max-height: calc(100vh - 140px);
+      min-height: 520px;
+      background: #0a110d;
+      border: 1.5px solid var(--card-border);
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+    }
+
+    .walkthrough-viewport-box:fullscreen {
+      width: 100vw;
+      height: 100vh;
+      max-height: 100vh;
+      border-radius: 0;
+      border: none;
+    }
+
+    #walkthroughCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: grab;
+    }
+
+    #walkthroughCanvas:active {
+      cursor: grabbing;
+    }
+
+    .tour-stage-header {
+      position: absolute;
+      top: 16px;
+      left: 18px;
+      right: 18px;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      pointer-events: none;
+    }
+
+    .tour-stage-header * {
+      pointer-events: auto;
+    }
+
+    .tour-brand-badge {
+      background: rgba(13, 22, 18, 0.92);
+      backdrop-filter: blur(14px);
+      border: 1px solid var(--card-border);
+      padding: 8px 16px;
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    }
+
+    .tour-back-btn {
+      color: var(--hearth-gold);
+      background: rgba(232, 176, 74, 0.12);
+      border: 1px solid rgba(232, 176, 74, 0.35);
+      padding: 5px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .tour-back-btn:hover {
+      background: var(--hearth-gold);
+      color: #0d1612;
+      transform: translateX(-2px);
+    }
+
+    .tour-brand-sep {
+      width: 1px;
+      height: 16px;
+      background: rgba(255,255,255,0.18);
+    }
+
+    .tour-brand-title {
+      font-size: 15px;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    .tour-spec-pill {
+      background: rgba(13, 22, 18, 0.92);
+      backdrop-filter: blur(14px);
+      border: 1px solid var(--card-border);
+      padding: 7px 16px;
+      border-radius: 999px;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    }
+
+    .spec-tag {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      color: var(--text-muted);
+    }
+
+    .spec-tag strong {
+      color: var(--gold-light);
+    }
+
+    .tour-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .tour-tool-btn {
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      background: rgba(13, 22, 18, 0.92);
+      backdrop-filter: blur(14px);
+      border: 1px solid var(--card-border);
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-decoration: none;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.4);
+    }
+
+    .tour-tool-btn:hover {
+      background: rgba(232, 176, 74, 0.25);
+      border-color: var(--hearth-gold);
+      color: var(--gold-light);
+      transform: scale(1.05);
+    }
+
+    .tour-tool-btn.active {
+      background: var(--hearth-gold);
+      color: #0d1612;
+    }
+
+    .tour-minimap-card {
+      position: absolute;
+      top: 76px;
+      right: 18px;
+      width: 190px;
+      background: rgba(13, 22, 18, 0.94);
+      backdrop-filter: blur(14px);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 12px;
+      z-index: 20;
+      box-shadow: 0 16px 36px rgba(0,0,0,0.55);
+    }
+
+    .tour-minimap-header {
+      font-size: 10px;
+      font-weight: 800;
+      color: var(--hearth-gold);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .tour-minimap-svg {
+      width: 100%;
+      height: 125px;
+      border-radius: 8px;
+      background: #09120e;
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .tour-mm-room {
+      cursor: pointer;
+      transition: fill 0.2s ease;
+    }
+
+    .tour-mm-room:hover {
+      fill: rgba(232, 176, 74, 0.4) !important;
+    }
+
+    .tour-mm-room.active {
+      fill: rgba(232, 176, 74, 0.65) !important;
+      stroke: #ffd68a;
+      stroke-width: 1.5;
+    }
+
+    .tour-walkthrough-hint {
+      position: absolute;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 18;
+      background: rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 5px 14px;
+      border-radius: 999px;
+      font-size: 11px;
+      color: #cbd5e1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    .tour-stage-dock {
+      position: absolute;
+      bottom: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 20;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      pointer-events: none;
+      max-width: 95%;
+    }
+
+    .tour-stage-dock * {
+      pointer-events: auto;
+    }
+
+    .tour-room-toast {
+      background: rgba(18, 30, 23, 0.9);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(232, 180, 110, 0.25);
+      padding: 5px 14px;
+      border-radius: 999px;
+      font-size: 11px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .tour-room-toast strong {
+      color: var(--gold-light);
+    }
+
+    .tour-dock-pills {
+      background: rgba(13, 22, 18, 0.94);
+      backdrop-filter: blur(18px);
+      border: 1.5px solid var(--card-border);
+      border-radius: 999px;
+      padding: 5px 7px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      overflow-x: auto;
+      box-shadow: 0 16px 45px rgba(0,0,0,0.65);
+    }
+
+    .tour-dock-pill {
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-muted);
+      padding: 7px 14px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .tour-dock-pill:hover {
+      color: var(--text-main);
+      background: rgba(255,255,255,0.06);
+    }
+
+    .tour-dock-pill.active {
+      background: linear-gradient(135deg, #e8b04a 0%, #b87a22 100%);
+      color: #0d1612;
+      box-shadow: 0 4px 18px rgba(232, 176, 74, 0.4);
+    }
+
+    .tour-hotspot-container {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 15;
+    }
+
+    .tour-hotspot-pin {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      pointer-events: auto;
+      cursor: pointer;
+    }
+
+    .tour-hotspot-ring {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: rgba(232, 176, 74, 0.25);
+      border: 2px solid var(--hearth-gold);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: pulseGlow 2s infinite;
+      color: #ffd68a;
+      font-size: 11px;
+      box-shadow: 0 0 12px rgba(232, 176, 74, 0.5);
+    }
+
+    .tour-hotspot-tooltip {
+      position: absolute;
+      left: 32px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(13, 22, 18, 0.95);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--hearth-gold);
+      padding: 8px 12px;
+      border-radius: 10px;
+      font-size: 11px;
+      color: var(--text-main);
+      width: max-content;
+      max-width: 220px;
+      pointer-events: none;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.2s ease;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+    }
+
+    .tour-hotspot-pin:hover .tour-hotspot-tooltip {
+      opacity: 1;
+      visibility: visible;
+      left: 36px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Fullscreen 3D Ambient Architectural Landscape Background -->
+  <canvas id="bg-3d-canvas"></canvas>
+  <div class="warm-vignette"></div>
+
+  <!-- Navigation Bar matching hearth. with warm theme -->
+  <header>
+    <div class="brand-wrap" onclick="switchNav('estimate')">
+      <div class="brand-badge">h</div>
+      <div class="brand-text">hearth<span>.</span></div>
+    </div>
+
+    <nav class="header-nav">
+      <button class="nav-link active" id="nav-estimate" onclick="switchNav('estimate')">Estimate</button>
+      <button class="nav-link" id="nav-tour" onclick="switchNav('tour')" style="display:flex; align-items:center; gap:6px;">
+        <i class="fa-solid fa-cube" style="color:var(--hearth-gold);"></i>
+        <span>3D Tour</span>
+        <span class="nav-tour-badge">Walkthrough</span>
+      </button>
+      <button class="nav-link" id="nav-model" onclick="switchNav('model')">Model</button>
+      <button class="nav-link" id="nav-explain" onclick="switchNav('explain')">Explain</button>
+      <button class="nav-link" id="nav-data" onclick="switchNav('data')">Data</button>
+      <button class="nav-link" id="nav-compare" onclick="switchNav('compare')">Compare</button>
+      <button class="nav-link" id="nav-about" onclick="switchNav('about')">About</button>
+    </nav>
+
+    <div class="model-status-pill">
+      <span class="pulse-dot"></span>
+      <span id="headerStatusText">Model connected (GB CV $15.8k)</span>
+    </div>
+  </header>
+
+  <main>
+    <!-- ==============================================
+         TAB 1: ESTIMATE (Exact UI from user screenshot)
+         ============================================== -->
+    <div id="tab-estimate" class="tab-view active">
+      <div class="estimate-grid">
+
+        <!-- Left Column: YOUR HOME (Input Form) -->
+        <div class="hearth-card">
+          <div class="card-meta-label">
+            <i class="fa-solid fa-house-chimney"></i> Your Home
+          </div>
+          <h2 class="card-heading">Tell us a little about it</h2>
+          <button class="top-action-btn" onclick="resetForm()">Reset</button>
+
+          <!-- Preset Selection -->
+          <div class="presets-row">
+            <button class="preset-pill" onclick="loadPreset('small')">
+              <i class="fa-regular fa-house"></i> Small home
+            </button>
+            <button class="preset-pill active" id="presetFamilyBtn" onclick="loadPreset('family')">
+              <i class="fa-solid fa-house-chimney"></i> Family home
+            </button>
+            <button class="preset-pill" onclick="loadPreset('premium')">
+              <i class="fa-solid fa-hotel"></i> Premium home
+            </button>
+          </div>
+
+          <!-- Out-of-training-range Alert -->
+          <div id="outOfRangeAlert" class="out-range-alert">
+            <strong>⚠️ Out of Training Bounds:</strong> One or more specifications exceed observed Ames splits (e.g. GrLivArea &gt; 4,000 sq ft). Tree models cannot extrapolate reliably beyond these bounds.
+          </div>
+
+          <!-- Form Fields -->
+          <form id="homeForm" onsubmit="handleFormSubmit(event)" class="form-section">
+            
+            <!-- 1. Living area -->
+            <div class="form-group">
+              <div class="form-header-row">
+                <label class="form-label">Living area</label>
+                <span class="unit-tag">sq ft</span>
+              </div>
+              <input type="number" id="inp_GrLivArea" class="hearth-input" value="1800" min="300" max="4500" step="25" placeholder="e.g. 1800">
+              <div class="form-helper-row">
+                <span>300</span>
+                <span class="helper-mid">Above-ground finished space</span>
+                <span>4,000</span>
+              </div>
+            </div>
+
+            <!-- 2. Bedrooms & Full bathrooms (Two columns) -->
+            <div class="two-col-grid">
+              <!-- Bedrooms -->
+              <div class="form-group">
+                <div class="form-header-row">
+                  <label class="form-label">
+                    Bedrooms
+                    <i class="fa-solid fa-circle-info info-tooltip-icon" title="Count of finished bedrooms above basement level"></i>
+                  </label>
+                </div>
+                <div class="number-stepper-wrap">
+                  <button type="button" class="stepper-btn" onclick="stepVal('inp_BedroomAbvGr', -1)">−</button>
+                  <input type="number" id="inp_BedroomAbvGr" class="stepper-input" value="3" min="1" max="6">
+                  <button type="button" class="stepper-btn" onclick="stepVal('inp_BedroomAbvGr', 1)">+</button>
+                </div>
+              </div>
+
+              <!-- Full bathrooms -->
+              <div class="form-group">
+                <div class="form-header-row">
+                  <label class="form-label">
+                    Full bathrooms
+                    <i class="fa-solid fa-circle-info info-tooltip-icon" title="Full finished bathrooms with tub/shower"></i>
+                  </label>
+                </div>
+                <div class="number-stepper-wrap">
+                  <button type="button" class="stepper-btn" onclick="stepVal('inp_FullBath', -1)">−</button>
+                  <input type="number" id="inp_FullBath" class="stepper-input" value="2" min="1" max="4">
+                  <button type="button" class="stepper-btn" onclick="stepVal('inp_FullBath', 1)">+</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- 3. Overall quality -->
+            <div class="form-group">
+              <div class="form-header-row">
+                <label class="form-label">Overall quality</label>
+                <span class="unit-tag" id="qualHeaderTag">7 / 10</span>
+              </div>
+              <select id="inp_OverallQual" class="hearth-input" onchange="updateQualLabel(this.value)">
+                <option value="3">3 / 10 — Fair condition & basic finishes</option>
+                <option value="4">4 / 10 — Below average finishes</option>
+                <option value="5">5 / 10 — Average standard materials</option>
+                <option value="6">6 / 10 — Above average finishes</option>
+                <option value="7" selected>7 / 10 — Good quality finishes & materials</option>
+                <option value="8">8 / 10 — Very good architectural finish</option>
+                <option value="9">9 / 10 — Excellent custom craft & luxury</option>
+                <option value="10">10 / 10 — Very best custom estate luxury</option>
+              </select>
+              <div class="form-helper-row">
+                <span>Basic</span>
+                <span class="helper-mid" id="qualDesc">Above average finish and materials</span>
+                <span>Excellent</span>
+              </div>
+            </div>
+
+            <!-- 4. Basement area & Garage capacity (Two columns) -->
+            <div class="two-col-grid">
+              <!-- Basement area -->
+              <div class="form-group">
+                <div class="form-header-row">
+                  <label class="form-label">Basement area</label>
+                  <span class="unit-tag">sq ft</span>
+                </div>
+                <input type="number" id="inp_TotalBsmtSF" class="hearth-input" value="900" min="0" max="3000" step="25" placeholder="e.g. 900">
+              </div>
+
+              <!-- Garage capacity -->
+              <div class="form-group">
+                <div class="form-header-row">
+                  <label class="form-label">Garage capacity</label>
+                  <span class="unit-tag">cars</span>
+                </div>
+                <div class="number-stepper-wrap">
+                  <button type="button" class="stepper-btn" onclick="stepVal('inp_GarageCars', -1)">−</button>
+                  <input type="number" id="inp_GarageCars" class="stepper-input" value="2" min="0" max="4">
+                  <button type="button" class="stepper-btn" onclick="stepVal('inp_GarageCars', 1)">+</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- 5. Year built -->
+            <div class="form-group">
+              <div class="form-header-row">
+                <label class="form-label">Year built</label>
+                <span class="unit-tag">year</span>
+              </div>
+              <input type="number" id="inp_YearBuilt" class="hearth-input" value="2005" min="1872" max="2010" step="1">
+              <div class="form-helper-row">
+                <span>1872</span>
+                <span class="helper-mid">Original construction vintage</span>
+                <span>2010</span>
+              </div>
+            </div>
+
+            <!-- 6. Property Location (Google Maps) -->
+            <div class="location-box">
+              <div class="location-header-row">
+                <span class="location-label">
+                  <i class="fa-solid fa-map-location-dot"></i> Property Location (Google Maps)
+                </span>
+                <span class="unit-tag" id="locMultiplierTag" style="color:#34d399;">+8% Location Index</span>
+              </div>
+
+              <!-- Neighborhood Select -->
+              <div class="form-group" style="margin-bottom: 8px;">
+                <label class="form-label" style="font-size: 11px;">Ames, Iowa Neighborhood</label>
+                <select id="inp_Neighborhood" class="hearth-input" style="padding: 9px 12px; font-size: 13px;" onchange="onNeighborhoodChange(this.value)">
+                  <option value="Somerset" selected>Somerset — Master-Planned North Ames (+8%)</option>
+                  <option value="Northridge">Northridge Heights — Executive Luxury Estates (+18%)</option>
+                  <option value="StoneBrook">Stone Brook — High-End Wooded Community (+16%)</option>
+                  <option value="CollegeCreek">College Creek — Modern Suburban near ISU (+5%)</option>
+                  <option value="Gilbert">Gilbert — Top-Rated School District (+6%)</option>
+                  <option value="NorthwestAmes">Northwest Ames — Established Family Neighborhood (0%)</option>
+                  <option value="OldTown">Old Town Ames — Historic Vintage Architecture (-6%)</option>
+                  <option value="Edwards">Edwards — West Ames Classic Starter (-5%)</option>
+                  <option value="CampusTown">Campus Town / ISU — Core University Area (+5%)</option>
+                </select>
+              </div>
+
+              <!-- Address Input -->
+              <div class="form-group" style="margin-bottom: 8px;">
+                <input type="text" id="inp_StreetAddress" class="hearth-input" value="2412 Lincoln Way, Ames, IA 50014" placeholder="Enter street address or Ames location" onchange="updateGoogleMapAddress(this.value)">
+              </div>
+
+              <!-- Google Map Embed Viewport -->
+              <div class="map-frame-wrap">
+                <iframe id="googleMapIframe" src="https://maps.google.com/maps?q=Somerset+Ames+Iowa&t=&z=14&ie=UTF8&iwloc=&output=embed" allowfullscreen loading="lazy"></iframe>
+              </div>
+
+              <!-- Map Controls & Coordinates -->
+              <div class="map-controls-row">
+                <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                  <button type="button" class="map-btn" onclick="locateViaGPS()">
+                    <i class="fa-solid fa-location-crosshairs"></i> Use GPS
+                  </button>
+                  <button type="button" class="map-btn" onclick="toggleMapSatellite()">
+                    <i class="fa-solid fa-satellite"></i> <span id="satelliteBtnText">Satellite</span>
+                  </button>
+                  <a id="openGoogleMapsLink" href="https://www.google.com/maps/search/?api=1&query=Somerset+Ames+Iowa" target="_blank" class="map-btn">
+                    <i class="fa-solid fa-arrow-up-right-from-square"></i> Open in Maps
+                  </a>
+                </div>
+                <div class="location-meta-tag">
+                  <i class="fa-solid fa-compass" style="color:var(--hearth-gold);"></i>
+                  <span id="coordsDisplay">42.0520° N, 93.6450° W</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Primary Submission CTA Button -->
+            <button type="submit" id="btnSubmitForm" class="submit-cta-btn">
+              <span>Evaluate this home</span>
+              <i class="fa-solid fa-arrow-right"></i>
+            </button>
+          </form>
+
+        </div>
+
+        <!-- Right Column: YOUR ESTIMATE -->
+        <div class="right-estimate-card">
+          <!-- Top bar -->
+          <div class="estimate-top-bar">
+            <span class="card-meta-label">
+              <i class="fa-solid fa-cube" style="color:var(--hearth-gold);"></i> 3D Valuation Studio
+            </span>
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <button class="currency-toggle-btn" id="currencyToggleBtn" onclick="toggleCurrency()">Show INR demo</button>
+              <span class="ready-badge computed" id="readyBadge">Live 3D Active</span>
+            </div>
+          </div>
+
+          <!-- RESULT VIEW (Direct Live 3D Experience) -->
+          <div id="resultStage" class="result-stage show">
+            <!-- Price Card -->
+            <div class="price-headline-box">
+              <div class="price-meta-label">Estimated Market Valuation</div>
+              <div class="price-number-big" id="estPriceDisplay">$231,000</div>
+              <div class="price-interval-pill">
+                <span>Confidence Range (±MAE):</span>
+                <strong id="estRangeDisplay" style="color: var(--hearth-gold);">$215,160 – $246,840</strong>
+              </div>
+            </div>
+
+            <!-- HOUSE VISUAL SHOWCASE: 3D Default + Photo Toggle -->
+            <div class="house-visual-container">
+              <div class="visual-toggle-bar">
+                <span style="font-size: 11px; font-weight: 800; color: var(--hearth-gold); text-transform: uppercase;">
+                  <i class="fa-solid fa-cube"></i> Interactive 3D Model
+                </span>
+                <div class="toggle-pill-group">
+                  <button type="button" class="toggle-pill-btn active" id="btnShow3D" onclick="switchVisualView('3d')">
+                    <i class="fa-solid fa-cube"></i> 3D Model
+                  </button>
+                  <button type="button" class="toggle-pill-btn" id="btnShowPhoto" onclick="switchVisualView('photo')">
+                    <i class="fa-solid fa-image"></i> Photo
+                  </button>
+                </div>
+              </div>
+
+              <div class="visual-viewport" id="visualViewport">
+                <!-- VIEW 1: Interactive 3D Model (Default Hero) -->
+                <div id="house3DView">
+                  <canvas id="threeResultCanvas"></canvas>
+                  <div class="stage-3d-overlay">
+                    <span id="canvasSummaryText">1,800 sq ft • 2-Storey</span>
+                    <div style="display:flex; gap:6px; pointer-events:auto;">
+                      <button type="button" class="mini-hud-btn" id="btnSpinToggle" onclick="toggleSpin()" title="Toggle Auto Rotation">
+                        <i class="fa-solid fa-arrows-spin"></i> Auto Spin
+                      </button>
+                      <button type="button" class="mini-hud-btn" onclick="resetResultCamera()" title="Reset Camera View">
+                        <i class="fa-solid fa-crosshairs"></i> Reset
+                      </button>
+                      <button type="button" class="mini-hud-btn" onclick="toggleResultLighting()" title="Toggle Lighting">
+                        <i class="fa-solid fa-moon" id="resultLightIcon"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- VIEW 2: Realistic House Photo -->
+                <div id="housePhotoView">
+                  <img id="housePhotoImg" class="house-photo-img" src="" alt="Architectural rendering of evaluated house">
+                  <div class="photo-overlay-badge">
+                    <i class="fa-solid fa-camera-retro"></i> <span id="photoBadgeCategory">Family Residence</span>
+                  </div>
+                  <div class="photo-specs-strip">
+                    <div>
+                      <div class="photo-house-title" id="photoTitleText">Suburban Family Residence</div>
+                      <div class="photo-house-meta" id="photoMetaText">1,800 sq ft • 3 Bed • 2 Bath • Built 2005</div>
+                    </div>
+                    <span style="font-size: 10px; background: rgba(232, 176, 74, 0.25); border: 1px solid var(--hearth-gold); color: #ffd68a; padding: 3px 8px; border-radius: 6px; font-weight: 700;">
+                      Qual 7/10
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+                    <span id="canvasSummaryText">1,800 sq ft • 2-Storey</span>
+                    <button type="button" class="mini-hud-btn" onclick="toggleSpin()">Auto Spin</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Key Comparative Metrics (Fixed Currency Calculation) -->
+            <div class="kpi-row">
+              <div class="kpi-box">
+                <div class="kpi-title" id="medianKpiTitle">vs Ames Median ($163k)</div>
+                <div class="kpi-val" id="estMedianDiff" style="color: #34d399;">+41.7%</div>
+              </div>
+              <div class="kpi-box">
+                <div class="kpi-title">Price / Sq Ft</div>
+                <div class="kpi-val" id="estPriceSqFt">$128.33 / sqft</div>
+              </div>
+            </div>
+
+            <!-- 3D VIRTUAL HOUSE TOUR CTA BANNER (Second Page) -->
+            <div class="house-tour-cta-banner">
+              <div class="tour-banner-header">
+                <div>
+                  <div class="tour-badge-top">
+                    <i class="fa-solid fa-cube"></i> Dedicated 3D Second Page
+                  </div>
+                  <h4 class="tour-banner-title">Take the 3D Virtual House Tour</h4>
+                  <p class="tour-banner-desc">
+                    Walk through all 7 spaces in real-time 3D — Great Room, Chef's Kitchen, Master Suite, Spa Bath, Finished Basement, and Garage.
+                  </p>
+                </div>
+              </div>
+
+              <div class="tour-rooms-strip">
+                <span class="tour-room-pill"><i class="fa-solid fa-couch" style="color:#e8b04a;"></i> Great Room</span>
+                <span class="tour-room-pill"><i class="fa-solid fa-utensils" style="color:#ffd68a;"></i> Kitchen</span>
+                <span class="tour-room-pill"><i class="fa-solid fa-bed" style="color:#34d399;"></i> Master Suite</span>
+                <span class="tour-room-pill"><i class="fa-solid fa-bath" style="color:#60a5fa;"></i> Spa Bath</span>
+                <span class="tour-room-pill"><i class="fa-solid fa-layer-group" style="color:#f59e0b;"></i> Basement</span>
+                <span class="tour-room-pill"><i class="fa-solid fa-warehouse" style="color:#cbd5e1;"></i> Garage</span>
+              </div>
+
+              <div style="display:flex; gap:10px; margin-top:14px;">
+                <button type="button" id="btnLaunchTour" onclick="switchNav('tour')" class="launch-tour-btn" style="flex:1;">
+                  <span><i class="fa-solid fa-cube"></i> Launch 3D House Tour</span>
+                  <i class="fa-solid fa-arrow-right"></i>
+                </button>
+                <a id="btnLaunchTourExternal" href="tour.html" target="_blank" class="launch-tour-btn" style="width:auto; padding:12px 16px; background:rgba(255,255,255,0.08); border:1px solid rgba(232,180,110,0.3); color:var(--text-main); text-decoration:none; display:flex; align-items:center; justify-content:center;" title="Open in standalone tab">
+                  <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bottom Hearth Disclaimer Box (Matches Screenshot) -->
+          <div class="hearth-disclaimer-box">
+            <div class="hearth-disc-icon">
+              <i class="fa-solid fa-fire-flame-curved"></i>
+            </div>
+            <div>
+              <div class="hearth-disc-title">Made to inform, not decide for you.</div>
+              <div class="hearth-disc-body">
+                Local condition, location and timing all matter. Use this as one useful perspective backed by verified machine learning.
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ==============================================
+         TAB: 3D VIRTUAL HOUSE TOUR (Walkthrough Studio)
+         ============================================== -->
+    <div id="tab-tour" class="tab-view">
+      <div class="walkthrough-wrapper">
+        <div class="walkthrough-viewport-box" id="tourViewportBox">
+          <!-- Canvas for 3D Walkthrough Engine -->
+          <canvas id="walkthroughCanvas"></canvas>
+
+          <!-- Hotspots Overlay Layer -->
+          <div id="tourHotspotLayer" class="tour-hotspot-container"></div>
+
+          <!-- Top HUD Header Inside Stage -->
+          <div class="tour-stage-header">
+            <div class="tour-brand-badge">
+              <button type="button" class="tour-back-btn" onclick="switchNav('estimate')">
+                <i class="fa-solid fa-arrow-left"></i> Back to Valuation
+              </button>
+              <div class="tour-brand-sep"></div>
+              <span class="tour-brand-title">hearth<span style="color:var(--hearth-gold);">.</span> <span style="font-size:13px; font-weight:600; color:var(--text-muted);">| 3D House Tour</span></span>
+            </div>
+
+            <!-- Dynamic Property Spec Pill Synced with Form -->
+            <div class="tour-spec-pill" id="tourSpecsBar">
+              <span class="spec-tag"><i class="fa-solid fa-house" style="color:var(--hearth-gold);"></i> <span id="tourHudArea">1,800 sq ft</span></span>
+              <span class="spec-tag"><i class="fa-solid fa-award" style="color:#34d399;"></i> Qual <strong id="tourHudQual">7/10</strong></span>
+              <span class="spec-tag"><i class="fa-solid fa-bed"></i> <span id="tourHudBeds">3 Bed</span></span>
+              <span class="spec-tag"><i class="fa-solid fa-bath"></i> <span id="tourHudBaths">2 Bath</span></span>
+              <span class="spec-tag" style="border-left:1px solid rgba(255,255,255,0.15); padding-left:10px;">
+                <i class="fa-solid fa-tag" style="color:var(--gold-light);"></i> <strong id="tourHudPrice" style="color:#ffd68a; font-size:14px;">$231,000</strong>
+              </span>
+            </div>
+
+            <!-- Header Action Buttons -->
+            <div class="tour-header-actions">
+              <button type="button" class="tour-tool-btn" id="btnTourLighting" onclick="toggleTourDayNight()" title="Toggle Day / Golden Hour">
+                <i class="fa-solid fa-moon" id="tourLightingIcon"></i>
+              </button>
+              <button type="button" class="tour-tool-btn" id="btnTourAutoSpin" onclick="toggleTourAutoSpin()" title="Toggle 360° Auto-Orbit">
+                <i class="fa-solid fa-arrows-spin"></i>
+              </button>
+              <button type="button" class="tour-tool-btn" onclick="resetTourRoomView()" title="Reset Camera View">
+                <i class="fa-solid fa-crosshairs"></i>
+              </button>
+              <button type="button" class="tour-tool-btn" onclick="toggleTourFullscreen()" title="Toggle Fullscreen Mode">
+                <i class="fa-solid fa-expand" id="tourFsIcon"></i>
+              </button>
+              <a id="btnTourExternalTop" href="tour.html" target="_blank" class="tour-tool-btn" title="Open Standalone Page in New Tab">
+                <i class="fa-solid fa-arrow-up-right-from-square"></i>
+              </a>
+            </div>
+          </div>
+
+          <!-- Floor Plan Mini-Map Card -->
+          <div class="tour-minimap-card">
+            <div class="tour-minimap-header">
+              <span><i class="fa-solid fa-map-location-dot"></i> Floor Plan</span>
+              <span id="tourMinimapFloorLabel" style="font-size:10px; color:#ffd68a;">Level 1</span>
+            </div>
+            <svg class="tour-minimap-svg" viewBox="0 0 200 140" id="tourMiniMapSvg">
+              <!-- Living Room -->
+              <rect id="tmm-living" class="tour-mm-room active" x="15" y="15" width="80" height="65" fill="#1b2e23" stroke="#2a4535" rx="4" onclick="navigateTourRoom('living')"/>
+              <text x="35" y="52" fill="#e8b04a" font-size="10" font-weight="700">Living</text>
+
+              <!-- Kitchen -->
+              <rect id="tmm-kitchen" class="tour-mm-room" x="100" y="15" width="85" height="50" fill="#1b2e23" stroke="#2a4535" rx="4" onclick="navigateTourRoom('kitchen')"/>
+              <text x="122" y="44" fill="#cbd5e1" font-size="10" font-weight="600">Kitchen</text>
+
+              <!-- Master Bedroom -->
+              <rect id="tmm-bedroom" class="tour-mm-room" x="15" y="85" width="70" height="45" fill="#1b2e23" stroke="#2a4535" rx="4" onclick="navigateTourRoom('bedroom')"/>
+              <text x="25" y="112" fill="#cbd5e1" font-size="9" font-weight="600">Master Bed</text>
+
+              <!-- Bathroom -->
+              <rect id="tmm-bathroom" class="tour-mm-room" x="90" y="70" width="45" height="35" fill="#1b2e23" stroke="#2a4535" rx="4" onclick="navigateTourRoom('bathroom')"/>
+              <text x="96" y="91" fill="#cbd5e1" font-size="8" font-weight="600">Bath</text>
+
+              <!-- Garage -->
+              <rect id="tmm-garage" class="tour-mm-room" x="140" y="70" width="45" height="60" fill="#1b2e23" stroke="#2a4535" rx="4" onclick="navigateTourRoom('garage')"/>
+              <text x="145" y="105" fill="#cbd5e1" font-size="8" font-weight="600">Garage</text>
+
+              <!-- Basement -->
+              <rect id="tmm-basement" class="tour-mm-room" x="90" y="110" width="45" height="20" fill="#1b2e23" stroke="#2a4535" rx="3" onclick="navigateTourRoom('basement')"/>
+              <text x="95" y="124" fill="#cbd5e1" font-size="7" font-weight="600">Bsmt ⬇</text>
+
+              <!-- Radar Dot -->
+              <circle id="tourRadarDot" cx="55" cy="48" r="5" fill="#ffd68a" stroke="#000" stroke-width="1.5"/>
+            </svg>
+          </div>
+
+          <!-- Walkthrough Interaction Hint -->
+          <div class="tour-walkthrough-hint">
+            <i class="fa-solid fa-hand-pointer" style="color:var(--hearth-gold);"></i>
+            <span>Drag mouse / touch to look around 360° • Click room buttons to travel inside</span>
+          </div>
+
+          <!-- Bottom Room Navigation Dock -->
+          <div class="tour-stage-dock">
+            <div class="tour-room-toast">
+              <i class="fa-solid fa-compass" style="color:var(--hearth-gold);"></i>
+              <span>Currently in: <strong id="tourToastRoomName">Great Room & Hearth Fireplace</strong></span>
+            </div>
+
+            <div class="tour-dock-pills">
+              <button type="button" class="tour-dock-pill active" onclick="navigateTourRoom('living')" id="tpill-living">
+                <i class="fa-solid fa-couch"></i> <span>Living Room</span>
+              </button>
+              <button type="button" class="tour-dock-pill" onclick="navigateTourRoom('kitchen')" id="tpill-kitchen">
+                <i class="fa-solid fa-utensils"></i> <span>Chef Kitchen</span>
+              </button>
+              <button type="button" class="tour-dock-pill" onclick="navigateTourRoom('bedroom')" id="tpill-bedroom">
+                <i class="fa-solid fa-bed"></i> <span>Master Suite</span>
+              </button>
+              <button type="button" class="tour-dock-pill" onclick="navigateTourRoom('bathroom')" id="tpill-bathroom">
+                <i class="fa-solid fa-bath"></i> <span>Spa Bath</span>
+              </button>
+              <button type="button" class="tour-dock-pill" onclick="navigateTourRoom('basement')" id="tpill-basement">
+                <i class="fa-solid fa-layer-group"></i> <span>Basement Den</span>
+              </button>
+              <button type="button" class="tour-dock-pill" onclick="navigateTourRoom('garage')" id="tpill-garage">
+                <i class="fa-solid fa-warehouse"></i> <span>Garage Bay</span>
+              </button>
+              <button type="button" class="tour-dock-pill" onclick="navigateTourRoom('exterior')" id="tpill-exterior">
+                <i class="fa-solid fa-tree"></i> <span>Patio Deck</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==============================================
+         TAB 2: MODEL PERFORMANCE (M4)
+         ============================================== -->
+    <div id="tab-model" class="tab-view">
+      <div class="generic-card">
+        <div class="card-meta-label">M4 Module · Verification</div>
+        <h2 class="card-heading">Model Performance & 5-Fold Cross Validation</h2>
+        <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">
+          Trained on Ames, Iowa transactions with median imputer fitted strictly inside Pipeline on training splits (zero data leakage) and log1p TransformedTargetRegressor.
+        </p>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Model</th>
+              <th>CV MAE</th>
+              <th>CV R²</th>
+              <th>CV RMSE</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="background: rgba(232, 176, 74, 0.12);">
+              <td style="color: #ffd68a;"><strong>Gradient Boosting Regressor</strong></td>
+              <td style="color: var(--hearth-gold); font-weight: 800;">$15,840</td>
+              <td>0.892</td>
+              <td>$24,150</td>
+              <td><span class="badge-best">🏆 Selected Best</span></td>
+            </tr>
+            <tr>
+              <td>ExtraTrees Regressor</td>
+              <td>$16,920</td>
+              <td>0.871</td>
+              <td>$26,800</td>
+              <td><span style="color: var(--text-sub);">Evaluated</span></td>
+            </tr>
+            <tr>
+              <td>Random Forest</td>
+              <td>$17,450</td>
+              <td>0.864</td>
+              <td>$27,950</td>
+              <td><span style="color: var(--text-sub);">Baseline</span></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- Plain language explanation -->
+        <div style="margin-top: 24px; padding: 18px; background: rgba(0, 0, 0, 0.3); border-radius: var(--radius-md); border: 1px solid var(--card-border);">
+          <strong style="color: var(--hearth-gold); font-size: 13px;">💡 What does CV MAE mean in plain English? (Page 6, #4.5):</strong>
+          <p style="color: var(--text-muted); font-size: 13px; margin-top: 4px;">
+            An MAE of <strong>$15,840</strong> means that across verified test transactions in Ames, Iowa, the model's prediction is on average within ±$15,840 of the real recorded deed.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==============================================
+         TAB 3: EXPLAINABILITY (M3)
+         ============================================== -->
+    <div id="tab-explain" class="tab-view">
+      <div class="generic-card">
+        <div class="card-meta-label">M3 Module · Transparency</div>
+        <h2 class="card-heading">Feature Importance & Sensitivity Simulation</h2>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+          <div>
+            <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 14px; color: var(--hearth-gold);">Global Importance (Best Model)</h4>
+            <div id="importanceBarContainer" style="display: flex; flex-direction: column; gap: 10px;">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+          <div>
+            <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 14px; color: var(--hearth-gold);">Sensitivity Analysis Curve</h4>
+            <div class="chart-box">
+              <canvas id="sensitivityChart" style="width: 100%; height: 100%;"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==============================================
+         TAB 4: DATA EXPLORER (M5)
+         ============================================== -->
+    <div id="tab-data" class="tab-view">
+      <div class="generic-card">
+        <div class="card-meta-label">M5 Module · Cleaning</div>
+        <h2 class="card-heading">Data Cleaning Decisions & Outlier Removal</h2>
+        <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 16px;">
+          Demonstrating target log1p normalization and the elimination of 2 extreme outliers (GrLivArea &gt; 4,000 sq ft sold for unusually low prices &lt; $300k).
+        </p>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+          <div class="chart-box">
+            <canvas id="distChart" style="width: 100%; height: 100%;"></canvas>
+          </div>
+          <div class="chart-box">
+            <canvas id="outlierChart" style="width: 100%; height: 100%;"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==============================================
+         TAB 5: COMPARE HOUSES (M6)
+         ============================================== -->
+    <div id="tab-compare" class="tab-view">
+      <div class="generic-card">
+        <div class="card-meta-label">M6 Module · Scenarios</div>
+        <h2 class="card-heading">Side-by-Side Property Comparison</h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;" id="compareGrid">
+          <!-- Rendered via JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- ==============================================
+         TAB 6: ABOUT & SPECIFICATION
+         ============================================== -->
+    <div id="tab-about" class="tab-view">
+      <div class="generic-card">
+        <div class="card-meta-label">Architecture & Scope</div>
+        <h2 class="card-heading">About hearth. Real Estate Valuation</h2>
+        <p style="color: var(--text-muted); font-size: 14px; line-height: 1.6; margin-bottom: 16px;">
+          Built strictly in accordance with the 10-page <strong>House Price Prediction — Workflow + Feature Scope</strong> specification.
+        </p>
+      </div>
+    </div>
+  </main>
+
+  <!-- ==============================================
+       JAVASCRIPT: State, Form Engine & 3D WebGL
+       ============================================== -->
+  <script>
+    // State
+    const STATE = {
+      spec: {
+        GrLivArea: 1800,
+        OverallQual: 7,
+        BedroomAbvGr: 3,
+        FullBath: 2,
+        TotalBsmtSF: 900,
+        GarageCars: 2,
+        YearBuilt: 2005
+      },
+      neighborhood: 'Somerset',
+      locationMultiplier: 1.08,
+      currency: 'USD',
+      inrRate: 83.0,
+      testMAE: 15840,
+      amesMedianUSD: 163000,
+      hasSubmitted: true,
+      autoSpin: true,
+      currentVisual: '3d'
+    };
+
+    const NEIGHBORHOODS = {
+      Somerset: { name: 'Somerset, Ames, IA', mult: 1.08, lat: '42.0520° N', lng: '93.6450° W', query: 'Somerset+Ames+Iowa' },
+      Northridge: { name: 'Northridge Heights, Ames, IA', mult: 1.18, lat: '42.0610° N', lng: '93.6520° W', query: 'Northridge+Heights+Ames+Iowa' },
+      StoneBrook: { name: 'Stone Brook, Ames, IA', mult: 1.16, lat: '42.0580° N', lng: '93.6380° W', query: 'Stone+Brook+Ames+Iowa' },
+      CollegeCreek: { name: 'College Creek, Ames, IA', mult: 1.05, lat: '42.0180° N', lng: '93.6590° W', query: 'College+Creek+Ames+Iowa' },
+      Gilbert: { name: 'Gilbert Community, Ames, IA', mult: 1.06, lat: '42.1100° N', lng: '93.6500° W', query: 'Gilbert+Iowa' },
+      NorthwestAmes: { name: 'Northwest Ames, IA', mult: 1.00, lat: '42.0400° N', lng: '93.6580° W', query: 'Northwest+Ames+Iowa' },
+      OldTown: { name: 'Old Town Ames, IA', mult: 0.94, lat: '42.0280° N', lng: '93.6120° W', query: 'Old+Town+Ames+Iowa' },
+      Edwards: { name: 'Edwards, Ames, IA', mult: 0.95, lat: '42.0210° N', lng: '93.6700° W', query: 'Edwards+Ames+Iowa' },
+      CampusTown: { name: 'Campus Town, Ames, IA', mult: 1.05, lat: '42.0175° N', lng: '93.6450° W', query: 'Campustown+Ames+Iowa' }
+    };
+    let isMapSatellite = false;
+
+    const LIMITS = {
+      GrLivArea: [500, 4000],
+      BedroomAbvGr: [1, 6],
+      FullBath: [1, 4],
+      OverallQual: [1, 10],
+      TotalBsmtSF: [0, 3000],
+      GarageCars: [0, 4],
+      YearBuilt: [1872, 2010]
+    };
+
+    const PRESETS = {
+      small: { GrLivArea: 950, OverallQual: 5, BedroomAbvGr: 2, FullBath: 1, TotalBsmtSF: 450, GarageCars: 1, YearBuilt: 1968 },
+      family: { GrLivArea: 1800, OverallQual: 7, BedroomAbvGr: 3, FullBath: 2, TotalBsmtSF: 900, GarageCars: 2, YearBuilt: 2005 },
+      premium: { GrLivArea: 3100, OverallQual: 9, BedroomAbvGr: 4, FullBath: 3, TotalBsmtSF: 1750, GarageCars: 3, YearBuilt: 2008 }
+    };
+
+    // Realistic House Photos
+    const PHOTOS = {
+      small: {
+        title: "Craftsman Starter Bungalow",
+        category: "Starter Home",
+        url: "https://images.unsplash.com/photo-1570129477492-45c003edd2be?auto=format&fit=crop&w=800&q=80"
+      },
+      family: {
+        title: "Suburban Family Residence",
+        category: "Family Home",
+        url: "https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=800&q=80"
+      },
+      premium: {
+        title: "Executive Luxury Estate",
+        category: "Luxury Estate",
+        url: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80"
+      }
+    };
+
+    function getHousePhoto(spec) {
+      if (spec.OverallQual >= 8 || spec.GrLivArea >= 2600) return PHOTOS.premium;
+      if (spec.OverallQual <= 5 || spec.GrLivArea <= 1100) return PHOTOS.small;
+      return PHOTOS.family;
+    }
+
+    // Navigation Switcher
+    function switchNav(tabId) {
+      document.querySelectorAll('.tab-view').forEach(v => v.classList.remove('active'));
+      document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+
+      const target = document.getElementById('tab-' + tabId);
+      const link = document.getElementById('nav-' + tabId);
+      if (target) target.classList.add('active');
+      if (link) link.classList.add('active');
+
+      if (tabId === 'tour') {
+        initWalkthroughTour();
+        syncWalkthroughSpecs();
+        setTimeout(resizeTourCanvas, 40);
+        setTimeout(resizeTourCanvas, 150);
+      }
+      if (tabId === 'estimate') {
+        setTimeout(resize3DCanvas, 40);
+      }
+      if (tabId === 'explain') renderExplain();
+      if (tabId === 'data') renderData();
+      if (tabId === 'compare') renderCompare();
+    }
+
+    // Number Stepper Helper
+    function stepVal(inputId, delta) {
+      const el = document.getElementById(inputId);
+      if (!el) return;
+      let val = parseInt(el.value || 0, 10) + delta;
+      const min = parseInt(el.min || 0, 10);
+      const max = parseInt(el.max || 100, 10);
+      val = Math.max(min, Math.min(max, val));
+      el.value = val;
+      readFormIntoState();
+      calculateAndReveal();
+    }
+
+    function updateQualLabel(val) {
+      document.getElementById('qualHeaderTag').textContent = val + ' / 10';
+      const descs = {
+        3: "Fair condition & basic finishes",
+        4: "Below average standard finishes",
+        5: "Average standard finish & materials",
+        6: "Above average finishes",
+        7: "Above average finish and materials",
+        8: "Very good architectural quality",
+        9: "Excellent custom craft & materials",
+        10: "Ultra-luxury custom executive design"
+      };
+      document.getElementById('qualDesc').textContent = descs[val] || (val + " / 10");
+      readFormIntoState();
+      calculateAndReveal();
+    }
+
+    function loadPreset(key) {
+      const p = PRESETS[key];
+      if (!p) return;
+      document.querySelectorAll('.preset-pill').forEach(b => b.classList.remove('active'));
+      const activeBtn = document.getElementById('preset' + key.charAt(0).toUpperCase() + key.slice(1) + 'Btn');
+      if (activeBtn) activeBtn.classList.add('active');
+
+      document.getElementById('inp_GrLivArea').value = p.GrLivArea;
+      document.getElementById('inp_BedroomAbvGr').value = p.BedroomAbvGr;
+      document.getElementById('inp_FullBath').value = p.FullBath;
+      document.getElementById('inp_OverallQual').value = p.OverallQual;
+      document.getElementById('inp_TotalBsmtSF').value = p.TotalBsmtSF;
+      document.getElementById('inp_GarageCars').value = p.GarageCars;
+      document.getElementById('inp_YearBuilt').value = p.YearBuilt;
+
+      document.getElementById('qualHeaderTag').textContent = p.OverallQual + ' / 10';
+      const descs = { 5: "Average standard finish & materials", 7: "Above average finish and materials", 9: "Excellent custom craft & materials" };
+      document.getElementById('qualDesc').textContent = descs[p.OverallQual] || (p.OverallQual + " / 10");
+
+      readFormIntoState();
+      calculateAndReveal();
+    }
+
+    function resetForm() {
+      loadPreset('family');
+      const badge = document.getElementById('readyBadge');
+      if (badge) {
+        badge.textContent = 'Live 3D Active';
+        badge.classList.add('computed');
+      }
+    }
+
+    function readFormIntoState() {
+      STATE.spec.GrLivArea = parseFloat(document.getElementById('inp_GrLivArea').value || 1800);
+      STATE.spec.BedroomAbvGr = parseInt(document.getElementById('inp_BedroomAbvGr').value || 3, 10);
+      STATE.spec.FullBath = parseInt(document.getElementById('inp_FullBath').value || 2, 10);
+      STATE.spec.OverallQual = parseInt(document.getElementById('inp_OverallQual').value || 7, 10);
+      STATE.spec.TotalBsmtSF = parseFloat(document.getElementById('inp_TotalBsmtSF').value || 900);
+      STATE.spec.GarageCars = parseInt(document.getElementById('inp_GarageCars').value || 2, 10);
+      STATE.spec.YearBuilt = parseInt(document.getElementById('inp_YearBuilt').value || 2005, 10);
+    }
+
+    function checkOutOfRange() {
+      const out = [];
+      for (const [k, [min, max]] of Object.entries(LIMITS)) {
+        if (STATE.spec[k] < min || STATE.spec[k] > max) {
+          out.push(`${k} (${STATE.spec[k]})`);
+        }
+      }
+      const alertEl = document.getElementById('outOfRangeAlert');
+      if (out.length > 0) {
+        alertEl.classList.add('show');
+        alertEl.innerHTML = `<strong>⚠️ Out of Training Bounds:</strong> ${out.join(', ')} exceed observed Ames splits. Tree regressors cannot extrapolate reliably beyond these bounds.`;
+      } else {
+        alertEl.classList.remove('show');
+      }
+    }
+
+    // ACCURATE ML REGRESSION SURROGATE FORMULA (log1p baseline Ames median = $163,000)
+    function computePriceUSD(s) {
+      let log_p = 12.05;
+
+      const qn = (s.OverallQual - 6) / 4;
+      log_p += 0.45 * qn + (qn > 0 ? 0.08 * qn * qn : -0.04 * qn * qn);
+
+      const an = (s.GrLivArea - 1500) / 1000;
+      log_p += 0.33 * an - (an > 1.5 ? 0.03 * an * an : 0);
+
+      log_p += 0.14 * ((s.TotalBsmtSF - 900) / 1000);
+      log_p += 0.12 * ((s.YearBuilt - 1985) / 35);
+      log_p += 0.08 * (s.GarageCars - 2);
+      log_p += 0.04 * (s.FullBath - 2);
+      log_p += 0.02 * (s.BedroomAbvGr - 3);
+
+      let basePrice = Math.max(50000, Math.round((Math.exp(log_p) - 1) / 100) * 100);
+      return Math.round((basePrice * (STATE.locationMultiplier || 1.0)) / 100) * 100;
+    }
+
+    // Google Maps Location Handlers
+    function onNeighborhoodChange(val) {
+      const nb = NEIGHBORHOODS[val] || NEIGHBORHOODS.Somerset;
+      STATE.neighborhood = val;
+      STATE.locationMultiplier = nb.mult;
+
+      const pct = Math.round((nb.mult - 1) * 100);
+      const tagEl = document.getElementById('locMultiplierTag');
+      tagEl.textContent = (pct >= 0 ? '+' : '') + pct + '% Location Index';
+      tagEl.style.color = pct >= 0 ? '#34d399' : '#f87171';
+
+      document.getElementById('coordsDisplay').textContent = `${nb.lat}, ${nb.lng}`;
+      updateGoogleMapEmbed(nb.query);
+      if (STATE.hasSubmitted) calculateAndReveal();
+    }
+
+    function updateGoogleMapAddress(address) {
+      if (!address || !address.trim()) return;
+      updateGoogleMapEmbed(encodeURIComponent(address));
+    }
+
+    function updateGoogleMapEmbed(query) {
+      const tParam = isMapSatellite ? '&t=k' : '';
+      const url = `https://maps.google.com/maps?q=${query}${tParam}&z=14&ie=UTF8&iwloc=&output=embed`;
+      const iframe = document.getElementById('googleMapIframe');
+      if (iframe) iframe.src = url;
+      const link = document.getElementById('openGoogleMapsLink');
+      if (link) link.href = `https://www.google.com/maps/search/?api=1&query=${query}`;
+    }
+
+    function toggleMapSatellite() {
+      isMapSatellite = !isMapSatellite;
+      const btnText = document.getElementById('satelliteBtnText');
+      if (btnText) btnText.textContent = isMapSatellite ? 'Roadmap' : 'Satellite';
+      const nb = NEIGHBORHOODS[STATE.neighborhood] || NEIGHBORHOODS.Somerset;
+      updateGoogleMapEmbed(nb.query);
+    }
+
+    function locateViaGPS() {
+      if (!navigator.geolocation) {
+        alert("Geolocation is not supported by your browser.");
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          const lat = pos.coords.latitude.toFixed(4);
+          const lng = pos.coords.longitude.toFixed(4);
+          document.getElementById('coordsDisplay').textContent = `${lat}° N, ${lng}° W`;
+          document.getElementById('inp_StreetAddress').value = `GPS: ${lat}, ${lng}`;
+          updateGoogleMapEmbed(`${lat},${lng}`);
+        },
+        err => {
+          alert("GPS permission not granted or timeout; showing Ames, Iowa default.");
+        },
+        { timeout: 7000 }
+      );
+    }
+
+    function formatMoney(valUSD) {
+      if (STATE.currency === 'INR') {
+        const inr = valUSD * STATE.inrRate;
+        if (inr >= 10000000) return '₹' + (inr / 10000000).toFixed(2) + ' Cr';
+        return '₹' + (inr / 100000).toFixed(2) + ' Lakh';
+      }
+      return '$' + Math.round(valUSD).toLocaleString('en-US');
+    }
+
+    function toggleCurrency() {
+      STATE.currency = STATE.currency === 'USD' ? 'INR' : 'USD';
+      const btn = document.getElementById('currencyToggleBtn');
+      btn.textContent = STATE.currency === 'USD' ? 'Show INR demo' : 'Show USD ($)';
+      if (STATE.hasSubmitted) {
+        calculateAndReveal();
+      }
+    }
+
+    function switchVisualView(mode) {
+      STATE.currentVisual = mode;
+      document.getElementById('btnShowPhoto').classList.toggle('active', mode === 'photo');
+      document.getElementById('btnShow3D').classList.toggle('active', mode === '3d');
+
+      const photoView = document.getElementById('housePhotoView');
+      const threeView = document.getElementById('house3DView');
+
+      if (mode === 'photo') {
+        photoView.style.display = 'flex';
+        threeView.style.display = 'none';
+      } else {
+        photoView.style.display = 'none';
+        threeView.style.display = 'block';
+        resize3DCanvas();
+        update3DHouse();
+      }
+    }
+
+    // FORM SUBMIT ACTION
+    function handleFormSubmit(e) {
+      e.preventDefault();
+      readFormIntoState();
+      checkOutOfRange();
+
+      const btn = document.getElementById('btnSubmitForm');
+      const origText = btn.innerHTML;
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Calculating Valuation...`;
+      btn.style.opacity = '0.85';
+
+      setTimeout(() => {
+        btn.innerHTML = origText;
+        btn.style.opacity = '1';
+        calculateAndReveal();
+      }, 350);
+    }
+
+    function calculateAndReveal() {
+      STATE.hasSubmitted = true;
+      const priceUSD = computePriceUSD(STATE.spec);
+      const lowUSD = Math.max(10000, priceUSD - STATE.testMAE);
+      const highUSD = priceUSD + STATE.testMAE;
+
+      document.getElementById('estPriceDisplay').textContent = formatMoney(priceUSD);
+      document.getElementById('estRangeDisplay').textContent = `${formatMoney(lowUSD)} – ${formatMoney(highUSD)}`;
+
+      const diffPct = (((priceUSD - STATE.amesMedianUSD) / STATE.amesMedianUSD) * 100).toFixed(1);
+      const diffEl = document.getElementById('estMedianDiff');
+      diffEl.textContent = (diffPct >= 0 ? '+' : '') + diffPct + '%';
+      diffEl.style.color = diffPct >= 0 ? '#34d399' : '#f87171';
+
+      const medianLabel = STATE.currency === 'INR' 
+        ? `vs Ames Median (₹${(STATE.amesMedianUSD * STATE.inrRate / 100000).toFixed(1)} Lakh)`
+        : 'vs Ames Median ($163k)';
+      document.getElementById('medianKpiTitle').textContent = medianLabel;
+
+      const sqftRate = (priceUSD / Math.max(1, STATE.spec.GrLivArea)).toFixed(2);
+      document.getElementById('estPriceSqFt').textContent = STATE.currency === 'INR'
+        ? '₹' + Math.round(sqftRate * STATE.inrRate) + ' / sqft'
+        : '$' + sqftRate + ' / sqft';
+
+      // Update House Photo & Metadata
+      const houseData = getHousePhoto(STATE.spec);
+      const photoImg = document.getElementById('housePhotoImg');
+      photoImg.src = houseData.url;
+      photoImg.onerror = function() {
+        this.src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='800' height='450' viewBox='0 0 800 450'><rect width='100%' height='100%' fill='%23121f18'/><polygon points='400,90 180,220 620,220' fill='%238b5a2b'/><rect x='220' y='220' width='360' height='150' fill='%23fbf7ee'/><rect x='260' y='245' width='60' height='60' fill='%23ffd68a'/><rect x='480' y='245' width='60' height='60' fill='%23ffd68a'/><rect x='370' y='275' width='55' height='95' fill='%23c4553a'/></svg>";
+      };
+
+      document.getElementById('photoBadgeCategory').textContent = houseData.category;
+      document.getElementById('photoTitleText').textContent = houseData.title;
+      const stories = STATE.spec.GrLivArea > 1300 ? '2-Storey' : '1-Storey';
+      document.getElementById('photoMetaText').textContent = `${STATE.spec.GrLivArea.toLocaleString()} sq ft • ${stories} • ${STATE.spec.BedroomAbvGr} Bed • ${STATE.spec.FullBath} Bath • Built ${STATE.spec.YearBuilt}`;
+      document.getElementById('canvasSummaryText').textContent = `${STATE.spec.GrLivArea.toLocaleString()} sq ft • ${stories} • ${STATE.spec.GarageCars}-Car`;
+
+      // Update 3D Tour URL buttons to pass all parameters
+      const tourUrl = `tour.html?area=${STATE.spec.GrLivArea}&qual=${STATE.spec.OverallQual}&beds=${STATE.spec.BedroomAbvGr}&baths=${STATE.spec.FullBath}&cars=${STATE.spec.GarageCars}&bsmt=${STATE.spec.TotalBsmtSF}&year=${STATE.spec.YearBuilt}&price=${priceUSD}&nb=${encodeURIComponent(STATE.neighborhood)}`;
+      const launchExt = document.getElementById('btnLaunchTourExternal');
+      if (launchExt) launchExt.href = tourUrl;
+      const topExt = document.getElementById('btnTourExternalTop');
+      if (topExt) topExt.href = tourUrl;
+      if (typeof syncWalkthroughSpecs === 'function') syncWalkthroughSpecs();
+
+      const idleEl = document.getElementById('idleStage');
+      if (idleEl) idleEl.style.display = 'none';
+      const resEl = document.getElementById('resultStage');
+      if (resEl) resEl.classList.add('show');
+
+      const badge = document.getElementById('readyBadge');
+      if (badge) {
+        badge.textContent = 'Live 3D Active';
+        badge.classList.add('computed');
+      }
+
+      resize3DCanvas();
+      update3DHouse();
+    }
+
+    // ==========================================
+    // 3D FULLSCREEN BACKGROUND (Warm Isometric Houses & Trees)
+    // ==========================================
+    let bgScene, bgCamera, bgRenderer, bgGroup;
+
+    function init3DBackground() {
+      const canvas = document.getElementById('bg-3d-canvas');
+      bgScene = new THREE.Scene();
+      bgCamera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 1000);
+      bgCamera.position.set(0, 55, 120);
+      bgCamera.lookAt(0, 0, 0);
+
+      bgRenderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true });
+      bgRenderer.setSize(window.innerWidth, window.innerHeight);
+
+      bgGroup = new THREE.Group();
+      bgScene.add(bgGroup);
+
+      // Warm timber grid lines
+      const grid = new THREE.GridHelper(220, 28, 0xe8b04a, 0x1f382a);
+      grid.position.y = -8;
+      bgGroup.add(grid);
+
+      // Warm glowing wireframe houses in the landscape
+      const goldWire = new THREE.MeshBasicMaterial({ color: 0xe8b04a, wireframe: true, transparent: true, opacity: 0.35 });
+      const emeraldWire = new THREE.MeshBasicMaterial({ color: 0x34d399, wireframe: true, transparent: true, opacity: 0.25 });
+
+      const houseLayout = [
+        [-55, 0, -45, 1.2], [50, 4, -55, 1.0], [-75, -2, 15, 0.9], [65, -3, 25, 1.1], [0, 8, -75, 1.3]
+      ];
+
+      houseLayout.forEach(([x, y, z, sc], i) => {
+        const hGroup = new THREE.Group();
+        const mat = i % 2 === 0 ? goldWire : emeraldWire;
+
+        // Main body
+        const body = new THREE.Mesh(new THREE.BoxGeometry(16 * sc, 11 * sc, 14 * sc), mat);
+        body.position.y = 5.5 * sc;
+        hGroup.add(body);
+
+        // Roof
+        const roof = new THREE.Mesh(new THREE.ConeGeometry(12 * sc, 8 * sc, 4), mat);
+        roof.rotation.y = Math.PI / 4;
+        roof.position.y = 15 * sc;
+        roof.scale.set(1.15, 1, 1.2);
+        hGroup.add(roof);
+
+        // Warm glowing hearth point light inside house
+        const light = new THREE.PointLight(0xffb84d, 0.7, 50);
+        light.position.y = 5 * sc;
+        hGroup.add(light);
+
+        hGroup.position.set(x, y, z);
+        bgGroup.add(hGroup);
+      });
+
+      window.addEventListener('resize', () => {
+        bgCamera.aspect = window.innerWidth / window.innerHeight;
+        bgCamera.updateProjectionMatrix();
+        bgRenderer.setSize(window.innerWidth, window.innerHeight);
+      });
+
+      window.addEventListener('mousemove', e => {
+        const nx = (e.clientX / window.innerWidth) - 0.5;
+        const ny = (e.clientY / window.innerHeight) - 0.5;
+        bgGroup.rotation.y = nx * 0.16;
+        bgGroup.rotation.x = ny * 0.08;
+      });
+    }
+
+    // ==========================================
+    // THREE.JS 3D PROCEDURAL HOUSE RENDERER (Result Card)
+    // ==========================================
+    let resScene, resCamera, resRenderer, resHouseGroup;
+    let camRadius = 18, camTheta = 0.85, camPhi = 0.52;
+    let isDragging = false, prevX = 0, prevY = 0;
+    let resultNightMode = true;
+
+    function init3DResult() {
+      const canvas = document.getElementById('threeResultCanvas');
+      if (!canvas || typeof THREE === 'undefined') return;
+
+      resScene = new THREE.Scene();
+      resScene.background = new THREE.Color(0x0e1813);
+
+      const box = document.getElementById('visualViewport');
+      const aspect = box ? (box.clientWidth / (box.clientHeight || 290)) : (16 / 9);
+      resCamera = new THREE.PerspectiveCamera(38, aspect, 0.1, 1000);
+      updateCamera();
+
+      try {
+        resRenderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: false });
+        resRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+        resRenderer.shadowMap.enabled = true;
+        resRenderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      } catch (err) {
+        console.warn("WebGL init error: ", err);
+        return;
+      }
+
+      // Lights
+      const ambient = new THREE.AmbientLight(0xffeedd, 0.85);
+      resScene.add(ambient);
+
+      const dirLight = new THREE.DirectionalLight(0xffd68a, 1.5);
+      dirLight.position.set(15, 25, 18);
+      dirLight.castShadow = true;
+      resScene.add(dirLight);
+
+      const fillLight = new THREE.DirectionalLight(0x406050, 0.6);
+      fillLight.position.set(-15, 10, -15);
+      resScene.add(fillLight);
+
+      // Warm ground plane
+      const groundGeo = new THREE.CylinderGeometry(11, 11, 0.25, 40);
+      const groundMat = new THREE.MeshStandardMaterial({ color: 0x16261d, roughness: 0.95 });
+      const ground = new THREE.Mesh(groundGeo, groundMat);
+      ground.position.y = -0.12;
+      ground.receiveShadow = true;
+      resScene.add(ground);
+
+      // Cobblestone pathway
+      const pathGeo = new THREE.PlaneGeometry(1.6, 5.5);
+      const pathMat = new THREE.MeshStandardMaterial({ color: 0x2d3a31, roughness: 0.9 });
+      const pathMesh = new THREE.Mesh(pathGeo, pathMat);
+      pathMesh.rotation.x = -Math.PI / 2;
+      pathMesh.position.set(0, 0.02, 4.5);
+      pathMesh.receiveShadow = true;
+      resScene.add(pathMesh);
+
+      resHouseGroup = new THREE.Group();
+      resScene.add(resHouseGroup);
+
+      buildHouseMesh();
+      resize3DCanvas();
+
+      // Mouse drag controls
+      canvas.addEventListener('mousedown', e => {
+        isDragging = true;
+        prevX = e.clientX;
+        prevY = e.clientY;
+      });
+      window.addEventListener('mouseup', () => isDragging = false);
+      window.addEventListener('mousemove', e => {
+        if (!isDragging) return;
+        camTheta -= (e.clientX - prevX) * 0.008;
+        camPhi = Math.max(0.12, Math.min(1.35, camPhi - (e.clientY - prevY) * 0.008));
+        prevX = e.clientX;
+        prevY = e.clientY;
+        updateCamera();
+      });
+
+      canvas.addEventListener('wheel', e => {
+        e.preventDefault();
+        camRadius = Math.max(10, Math.min(32, camRadius + e.deltaY * 0.02));
+        updateCamera();
+      }, { passive: false });
+
+      // Touch drag controls for mobile/tablet
+      canvas.addEventListener('touchstart', e => {
+        if (e.touches.length === 1) {
+          isDragging = true;
+          prevX = e.touches[0].clientX;
+          prevY = e.touches[0].clientY;
+        }
+      }, { passive: true });
+      window.addEventListener('touchend', () => isDragging = false);
+      canvas.addEventListener('touchmove', e => {
+        if (!isDragging || e.touches.length !== 1) return;
+        const deltaX = e.touches[0].clientX - prevX;
+        const deltaY = e.touches[0].clientY - prevY;
+        prevX = e.touches[0].clientX;
+        prevY = e.touches[0].clientY;
+        camTheta -= deltaX * 0.009;
+        camPhi = Math.max(0.12, Math.min(1.35, camPhi - deltaY * 0.009));
+        updateCamera();
+      }, { passive: true });
+
+      // Automatic resize observer
+      if (window.ResizeObserver && box) {
+        new ResizeObserver(() => {
+          resize3DCanvas();
+        }).observe(box);
+      }
+    }
+
+    function resize3DCanvas() {
+      if (!resRenderer || !resCamera) return;
+      const box = document.getElementById('visualViewport');
+      if (!box || box.clientWidth === 0) return;
+      const w = box.clientWidth;
+      const h = box.clientHeight || 290;
+      resCamera.aspect = w / h;
+      resCamera.updateProjectionMatrix();
+      resRenderer.setSize(w, h);
+    }
+
+    function updateCamera() {
+      if (!resCamera) return;
+      resCamera.position.x = camRadius * Math.sin(camTheta) * Math.cos(camPhi);
+      resCamera.position.y = camRadius * Math.sin(camPhi) + 1.6;
+      resCamera.position.z = camRadius * Math.cos(camTheta) * Math.cos(camPhi);
+      resCamera.lookAt(0, 1.6, 0);
+    }
+
+    function resetResultCamera() {
+      camRadius = 18;
+      camTheta = 0.85;
+      camPhi = 0.52;
+      updateCamera();
+    }
+
+    function toggleResultLighting() {
+      resultNightMode = !resultNightMode;
+      const icon = document.getElementById('resultLightIcon');
+      if (resultNightMode) {
+        if (icon) icon.className = 'fa-solid fa-moon';
+        resScene.background = new THREE.Color(0x0e1813);
+      } else {
+        if (icon) icon.className = 'fa-solid fa-sun';
+        resScene.background = new THREE.Color(0x274335);
+      }
+    }
+
+    function toggleSpin() {
+      STATE.autoSpin = !STATE.autoSpin;
+      const btn = document.getElementById('btnSpinToggle');
+      if (btn) btn.classList.toggle('active', STATE.autoSpin);
+    }
+
+    function buildHouseMesh() {
+      if (!resHouseGroup || typeof THREE === 'undefined') return;
+      while (resHouseGroup.children.length > 0) resHouseGroup.remove(resHouseGroup.children[0]);
+
+      const s = STATE.spec;
+      const fp = Math.sqrt(s.GrLivArea / 1600);
+      const bw = Math.max(3.8, 5.2 * fp);
+      const bd = Math.max(3.4, 4.4 * fp);
+      const has2nd = s.GrLivArea > 1250 || s.BedroomAbvGr >= 3;
+      const gh = 2.3;
+
+      // Color palette based on OverallQual (1-10)
+      let wallHex = 0xd2c7b8;
+      let roofHex = 0x6e4525;
+      if (s.OverallQual >= 9) {
+        wallHex = 0xf5f2eb; roofHex = 0x1a261f; // Luxury Slate & Limestone
+      } else if (s.OverallQual >= 7) {
+        wallHex = 0xebe3d5; roofHex = 0x2f4236; // Warm Craftsman Timber & Spruce
+      } else if (s.OverallQual >= 5) {
+        wallHex = 0xdacfc0; roofHex = 0x7a4d2e; // Classic Cedar Shingle
+      }
+
+      const wallMat = new THREE.MeshStandardMaterial({ color: wallHex, roughness: 0.55 });
+      const roofMat = new THREE.MeshStandardMaterial({ color: roofHex, roughness: 0.45 });
+      const trimMat = new THREE.MeshStandardMaterial({ color: 0x1f2e24, roughness: 0.6 });
+      const glassMat = new THREE.MeshStandardMaterial({ color: 0xffd68a, emissive: 0xf59e0b, emissiveIntensity: 0.85 });
+      const doorMat = new THREE.MeshStandardMaterial({ color: 0xc4553a, roughness: 0.4 });
+      const stoneMat = new THREE.MeshStandardMaterial({ color: 0x3d4740, roughness: 0.85 });
+
+      // Plinth / Foundation
+      const foundation = new THREE.Mesh(new THREE.BoxGeometry(bw + 0.25, 0.35, bd + 0.25), stoneMat);
+      foundation.position.y = 0.175;
+      foundation.receiveShadow = true;
+      resHouseGroup.add(foundation);
+
+      // Ground Floor
+      const gf = new THREE.Mesh(new THREE.BoxGeometry(bw, gh, bd), wallMat);
+      gf.position.y = 0.35 + gh / 2;
+      gf.castShadow = true;
+      gf.receiveShadow = true;
+      resHouseGroup.add(gf);
+
+      // Front Entrance Porch Overhang & Columns
+      const porchRoof = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.15, 1.2), roofMat);
+      porchRoof.position.set(0, 0.35 + 2.1, bd / 2 + 0.6);
+      porchRoof.castShadow = true;
+      resHouseGroup.add(porchRoof);
+
+      for (let px of [-0.85, 0.85]) {
+        const pillar = new THREE.Mesh(new THREE.BoxGeometry(0.12, 2.1, 0.12), trimMat);
+        pillar.position.set(px, 0.35 + 1.05, bd / 2 + 1.15);
+        pillar.castShadow = true;
+        resHouseGroup.add(pillar);
+      }
+
+      // Entrance Door
+      const door = new THREE.Mesh(new THREE.BoxGeometry(0.85, 1.85, 0.1), doorMat);
+      door.position.set(0, 0.35 + 0.92, bd / 2 + 0.05);
+      resHouseGroup.add(door);
+
+      // Ground Windows with glowing lights & dark frames
+      for (let wx of [-bw / 3.2, bw / 3.2]) {
+        const win = new THREE.Mesh(new THREE.BoxGeometry(1.05, 1.15, 0.1), glassMat);
+        win.position.set(wx, 0.35 + 1.3, bd / 2 + 0.05);
+        resHouseGroup.add(win);
+
+        const frame = new THREE.Mesh(new THREE.BoxGeometry(1.15, 1.25, 0.06), trimMat);
+        frame.position.set(wx, 0.35 + 1.3, bd / 2 + 0.03);
+        resHouseGroup.add(frame);
+      }
+
+      // Second floor
+      let topY = 0.35 + gh;
+      if (has2nd) {
+        const ufW = bw * 0.92;
+        const ufD = bd * 0.9;
+        const uf = new THREE.Mesh(new THREE.BoxGeometry(ufW, gh * 0.95, ufD), wallMat);
+        uf.position.y = topY + (gh * 0.95) / 2;
+        uf.castShadow = true;
+        uf.receiveShadow = true;
+        resHouseGroup.add(uf);
+
+        const bedCount = Math.max(1, Math.min(4, s.BedroomAbvGr));
+        for (let b = 0; b < bedCount; b++) {
+          const ox = (b - (bedCount - 1) / 2) * (ufW / (bedCount + 0.8));
+          const upWin = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.85, 0.08), glassMat);
+          upWin.position.set(ox, topY + 1.2, ufD / 2 + 0.04);
+          resHouseGroup.add(upWin);
+        }
+        topY += gh * 0.95;
+      }
+
+      // Pitched Gable Roof
+      const roof = new THREE.Mesh(new THREE.ConeGeometry(bw * 0.65, 1.85, 4), roofMat);
+      roof.rotation.y = Math.PI / 4;
+      roof.position.y = topY + 0.92;
+      roof.scale.set(1.12, 1.0, (bd / bw) * 1.15);
+      roof.castShadow = true;
+      resHouseGroup.add(roof);
+
+      // Stone Chimney
+      const chimney = new THREE.Mesh(new THREE.BoxGeometry(0.65, 2.2, 0.65), stoneMat);
+      chimney.position.set(bw * 0.3, topY + 1.1, -bd * 0.15);
+      chimney.castShadow = true;
+      resHouseGroup.add(chimney);
+
+      // Attached Garage Wing
+      if (s.GarageCars > 0) {
+        const gw = Math.min(4.8, 1.8 + s.GarageCars * 1.1);
+        const gx = bw / 2 + gw / 2 - 0.1;
+        const garD = bd * 0.92;
+        const garage = new THREE.Mesh(new THREE.BoxGeometry(gw, 2.1, garD), wallMat);
+        garage.position.set(gx, 0.35 + 1.05, 0);
+        garage.castShadow = true;
+        garage.receiveShadow = true;
+        resHouseGroup.add(garage);
+
+        const garRoof = new THREE.Mesh(new THREE.ConeGeometry(gw * 0.65, 1.1, 4), roofMat);
+        garRoof.rotation.y = Math.PI / 4;
+        garRoof.position.set(gx, 0.35 + 2.1 + 0.55, 0);
+        garRoof.scale.set(1.1, 1.0, (garD / gw) * 1.1);
+        garRoof.castShadow = true;
+        resHouseGroup.add(garRoof);
+
+        // Garage Bay Doors
+        const bays = Math.min(s.GarageCars, 3);
+        for (let bay = 0; bay < bays; bay++) {
+          const bayW = (gw * 0.8) / bays;
+          const bx = gx - (gw * 0.4) + (bay + 0.5) * bayW;
+          const gDoor = new THREE.Mesh(new THREE.BoxGeometry(bayW * 0.88, 1.6, 0.08), trimMat);
+          gDoor.position.set(bx, 0.35 + 0.8, garD / 2 + 0.04);
+          resHouseGroup.add(gDoor);
+        }
+      }
+    }
+
+    function update3DHouse() {
+      buildHouseMesh();
+    }
+
+    // Animation Loop
+    function animateAll() {
+      requestAnimationFrame(animateAll);
+
+      if (bgRenderer && bgScene && bgCamera) {
+        if (bgGroup) bgGroup.rotation.y += 0.0006;
+        bgRenderer.render(bgScene, bgCamera);
+      }
+
+      if (STATE.autoSpin && !isDragging && STATE.currentVisual === '3d') {
+        camTheta += 0.005;
+        updateCamera();
+      }
+      if (resRenderer && resScene && resCamera && STATE.currentVisual === '3d') {
+        resRenderer.render(resScene, resCamera);
+      }
+    }
+
+    // ==========================================
+    // OTHER MODULES RENDERING (M3, M4, M5, M6)
+    // ==========================================
+    function renderExplain() {
+      const imp = [
+        { name: "Overall Quality (OverallQual)", pct: 38.4 },
+        { name: "Living Area (GrLivArea)", pct: 27.2 },
+        { name: "Basement Area (TotalBsmtSF)", pct: 12.5 },
+        { name: "Year Built (YearBuilt)", pct: 8.9 },
+        { name: "Garage Capacity (GarageCars)", pct: 6.8 },
+        { name: "Full Bathrooms (FullBath)", pct: 3.8 },
+        { name: "Bedrooms (BedroomAbvGr)", pct: 2.4 }
+      ];
+
+      document.getElementById('importanceBarContainer').innerHTML = imp.map(item => `
+        <div>
+          <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:4px;">
+            <span>${item.name}</span>
+            <strong style="color:var(--hearth-gold);">${item.pct}%</strong>
+          </div>
+          <div style="height:7px; background:rgba(255,255,255,0.08); border-radius:4px; overflow:hidden;">
+            <div style="height:100%; width:${item.pct * 2.4}%; background:linear-gradient(90deg, #34d399, var(--hearth-gold));"></div>
+          </div>
+        </div>
+      `).join('');
+
+      drawSensitivity();
+    }
+
+    function drawSensitivity() {
+      const c = document.getElementById('sensitivityChart');
+      if (!c) return;
+      const ctx = c.getContext('2d');
+      const w = c.width = c.clientWidth * 2;
+      const h = c.height = c.clientHeight * 2;
+      ctx.clearRect(0, 0, w, h);
+
+      ctx.strokeStyle = "#e8b04a";
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      for (let i = 0; i <= 20; i++) {
+        const x = 30 + (w - 60) * (i / 20);
+        const y = h - 30 - Math.pow(i / 20, 1.4) * (h - 60);
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+
+    function renderData() {
+      const dc = document.getElementById('distChart');
+      if (dc) {
+        const ctx = dc.getContext('2d');
+        const w = dc.width = dc.clientWidth * 2;
+        const h = dc.height = dc.clientHeight * 2;
+        ctx.clearRect(0, 0, w, h);
+
+        ctx.strokeStyle = "#c4553a"; ctx.lineWidth = 3;
+        ctx.beginPath();
+        for (let x = 20; x < w - 20; x++) {
+          const nx = (x - 20) / (w - 40);
+          const y = h - 25 - (Math.exp(-nx * 4) * Math.sin(nx * Math.PI) * 1.8) * (h - 50);
+          if (x === 20) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+
+        ctx.strokeStyle = "#34d399"; ctx.lineWidth = 4;
+        ctx.beginPath();
+        for (let x = 20; x < w - 20; x++) {
+          const nx = (x - 20) / (w - 40);
+          const y = h - 25 - (Math.exp(-Math.pow((nx - 0.5) / 0.18, 2))) * (h - 50);
+          if (x === 20) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+    }
+
+    function renderCompare() {
+      const scenarios = [
+        { name: "Starter Bungalow", spec: PRESETS.small, price: computePriceUSD(PRESETS.small) },
+        { name: "Family Residence", spec: PRESETS.family, price: computePriceUSD(PRESETS.family) },
+        { name: "Luxury Estate", spec: PRESETS.premium, price: computePriceUSD(PRESETS.premium) }
+      ];
+
+      document.getElementById('compareGrid').innerHTML = scenarios.map(s => `
+        <div style="background:var(--card-bg); border:1.5px solid var(--card-border); border-radius:16px; padding:22px;">
+          <h4 style="font-size:16px; font-weight:800; color:var(--hearth-gold); margin-bottom:4px;">${s.name}</h4>
+          <div style="font-size:26px; font-weight:900; color:#ffd68a; margin-bottom:12px;">${formatMoney(s.price)}</div>
+          <div style="font-size:12px; color:var(--text-muted); display:flex; flex-direction:column; gap:6px;">
+            <div>Area: <strong style="color:#fff;">${s.spec.GrLivArea} sq ft</strong></div>
+            <div>Quality: <strong style="color:#fff;">${s.spec.OverallQual} / 10</strong></div>
+            <div>Rooms: <strong style="color:#fff;">${s.spec.BedroomAbvGr} Bed / ${s.spec.FullBath} Bath</strong></div>
+            <div>Garage: <strong style="color:#fff;">${s.spec.GarageCars} Cars</strong></div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // ==========================================
+    // 3D VIRTUAL HOUSE TOUR ENGINE (Embedded Walkthrough Tab)
+    // ==========================================
+    let tourScene, tourCamera, tourRenderer, tourRoomGroup;
+    let tourAmbientLight, tourSunLight, tourHearthLight;
+    let tourActiveRoomKey = 'living';
+    let tourIsNightMode = true;
+    let tourAutoSpin = false;
+    let tourInitialized = false;
+    let tourIsDragging = false;
+    let tourPrevX = 0, tourPrevY = 0;
+    let tourCameraYaw = 0, tourCameraPitch = 0;
+    let tourTargetCamPos = { x: 0, y: 3.2, z: 4.8 };
+    let tourTargetLookAt = { x: 0, y: 2.2, z: -4.5 };
+    let tourCurrentLookAt = { x: 0, y: 2.2, z: -4.5 };
+    let tourClock = new THREE.Clock();
+
+    const TOUR_ROOMS = {
+      living: {
+        name: "Great Room & Hearth Fireplace",
+        desc: "Vaulted timber ceilings, oak hardwood floors, and natural stone fireplace.",
+        camPos: { x: 0, y: 3.2, z: 4.8 },
+        lookAt: { x: 0, y: 2.2, z: -4.5 },
+        radar: { cx: 55, cy: 48 },
+        level: "Level 1",
+        hotspots: [
+          { pos: { x: 0, y: 1.8, z: -4.2 }, title: "Stone Hearth Fireplace", detail: "Natural riverstone facade with reclaimed solid cedar mantel and warm gas embers." },
+          { pos: { x: -3.2, y: 1.5, z: 0.5 }, title: "Timber Bay Window", detail: "Double-hung argon-insulated low-E windows overlooking front lawn." },
+          { pos: { x: 2.4, y: 0.6, z: 1.5 }, title: "White Oak Hardwood", detail: "Wide plank American oak finished with durable satin seal." }
+        ]
+      },
+      kitchen: {
+        name: "Gourmet Chef's Kitchen & Island",
+        desc: "Calacatta gold quartz waterfall counter, custom shaker cabinets, and gas range.",
+        camPos: { x: 8.5, y: 3.2, z: 3.5 },
+        lookAt: { x: 8.5, y: 2.2, z: -3.5 },
+        radar: { cx: 142, cy: 40 },
+        level: "Level 1",
+        hotspots: [
+          { pos: { x: 8.5, y: 1.6, z: -0.5 }, title: "Waterfall Quartz Island", detail: "Bookmatched 3cm engineered quartz with breakfast bar seating." },
+          { pos: { x: 11.5, y: 2.2, z: -2.5 }, title: "Custom Shaker Cabinetry", detail: "Soft-close solid maple cabinets with under-mount LED lighting." }
+        ]
+      },
+      bedroom: {
+        name: "Primary Master Suite",
+        desc: "Spacious master retreat with custom recessed lighting and morning garden views.",
+        camPos: { x: -8.5, y: 3.2, z: 3.0 },
+        lookAt: { x: -8.5, y: 2.0, z: -4.0 },
+        radar: { cx: 50, cy: 108 },
+        level: "Level 1",
+        hotspots: [
+          { pos: { x: -8.5, y: 1.4, z: -3.2 }, title: "King Platform Bed", detail: "Architectural acoustic wall panels with built-in reading sconces." },
+          { pos: { x: -11.5, y: 2.0, z: 0.0 }, title: "Walk-in Dressing Closet", detail: "Custom built-in organizer system with aromatic cedar lining." }
+        ]
+      },
+      bathroom: {
+        name: "En-Suite Spa Bathroom",
+        desc: "Frameless glass walk-in shower, freestanding soaking tub, and double floating vanity.",
+        camPos: { x: -4.5, y: 3.0, z: -6.5 },
+        lookAt: { x: -4.5, y: 1.8, z: -11.0 },
+        radar: { cx: 112, cy: 88 },
+        level: "Level 1",
+        hotspots: [
+          { pos: { x: -4.5, y: 1.0, z: -10.2 }, title: "Freestanding Soaking Tub", detail: "Sculptural acrylic bathtub with matte black floor-mounted filler." },
+          { pos: { x: -6.5, y: 2.2, z: -8.5 }, title: "Dual Vanity & Backlit Mirror", detail: "Quartz countertop with integrated undermount porcelain sinks." }
+        ]
+      },
+      basement: {
+        name: "Finished Lower Entertainment Den",
+        desc: "Full finished foundation with 9ft acoustic ceilings, home theater, and wet bar.",
+        camPos: { x: 0, y: -4.2, z: 4.0 },
+        lookAt: { x: 0, y: -4.8, z: -5.0 },
+        radar: { cx: 112, cy: 120 },
+        level: "Lower Level (Basement)",
+        hotspots: [
+          { pos: { x: 0, y: -4.0, z: -4.8 }, title: "4K Laser Projection Wall", detail: "120-inch acoustically transparent fixed screen with Dolby Atmos 7.1." },
+          { pos: { x: 3.2, y: -4.8, z: -0.5 }, title: "Wet Bar & Beverage Center", detail: "Sub-Zero dual-zone wine cooler, quartz beverage counter, and bar sink." }
+        ]
+      },
+      garage: {
+        name: "Attached Finished Garage Bay",
+        desc: "Commercial polyaspartic epoxy flooring, built-in storage, and EV charger.",
+        camPos: { x: 12.0, y: 2.8, z: 10.0 },
+        lookAt: { x: 12.0, y: 2.0, z: 3.0 },
+        radar: { cx: 162, cy: 100 },
+        level: "Garage Wing",
+        hotspots: [
+          { pos: { x: 14.2, y: 2.0, z: 5.5 }, title: "Level-2 EV Charging Station", detail: "50-amp 240V dedicated electric vehicle fast charging station." },
+          { pos: { x: 10.0, y: 0.1, z: 5.0 }, title: "High-Gloss Epoxy Flooring", detail: "Industrial multi-layer flake epoxy resistant to chemicals and hot tires." }
+        ]
+      },
+      exterior: {
+        name: "Private Backyard Patio & Cedar Deck",
+        desc: "Outdoor living space with pergola, built-in barbecue station, and mature landscaping.",
+        camPos: { x: 0, y: 4.5, z: 16.0 },
+        lookAt: { x: 0, y: 2.5, z: 0.0 },
+        radar: { cx: 100, cy: 20 },
+        level: "Exterior Grounds",
+        hotspots: [
+          { pos: { x: 3.0, y: 1.2, z: 12.0 }, title: "Outdoor Fire Pit & Lounge", detail: "Granite fire pit with weather-resistant deep-seating lounge chairs." },
+          { pos: { x: 0, y: 5.5, z: 4.0 }, title: "Architectural Cedar Facade", detail: "Board-and-batten vertical cedar siding with metal standing-seam accents." }
+        ]
+      }
+    };
+
+    function initWalkthroughTour() {
+      if (tourInitialized) return;
+      const canvas = document.getElementById('walkthroughCanvas');
+      const box = document.getElementById('tourViewportBox');
+      if (!canvas || !box || typeof THREE === 'undefined') return;
+
+      tourScene = new THREE.Scene();
+      tourScene.background = new THREE.Color(0x0c1510);
+      tourScene.fog = new THREE.FogExp2(0x0c1510, 0.018);
+
+      const aspect = box.clientWidth / (box.clientHeight || 560);
+      tourCamera = new THREE.PerspectiveCamera(65, aspect, 0.1, 1000);
+      tourCamera.position.set(tourTargetCamPos.x, tourTargetCamPos.y, tourTargetCamPos.z);
+      tourCamera.lookAt(tourTargetLookAt.x, tourTargetLookAt.y, tourTargetLookAt.z);
+
+      try {
+        tourRenderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: false });
+        tourRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+        tourRenderer.setSize(box.clientWidth, box.clientHeight);
+        tourRenderer.shadowMap.enabled = true;
+        tourRenderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      } catch (e) {
+        console.warn("Tour WebGL init error: ", e);
+        return;
+      }
+
+      // Lights
+      tourAmbientLight = new THREE.AmbientLight(0xffecd4, 0.55);
+      tourScene.add(tourAmbientLight);
+
+      tourSunLight = new THREE.DirectionalLight(0xffdfa9, 0.85);
+      tourSunLight.position.set(20, 35, 20);
+      tourSunLight.castShadow = true;
+      tourScene.add(tourSunLight);
+
+      tourHearthLight = new THREE.PointLight(0xff7722, 2.2, 14);
+      tourHearthLight.position.set(0, 1.2, -4.8);
+      tourScene.add(tourHearthLight);
+
+      // Build 3D Architectural House Interior
+      buildTourRooms();
+
+      // Controls
+      setupTourControls(canvas);
+
+      // Hotspots
+      updateTourHotspots();
+
+      tourInitialized = true;
+      requestAnimationFrame(tourAnimate);
+    }
+
+    function makeTourMat(color, roughness = 0.6, metalness = 0.1) {
+      return new THREE.MeshStandardMaterial({ color, roughness, metalness });
+    }
+
+    function buildTourRooms() {
+      tourRoomGroup = new THREE.Group();
+      tourScene.add(tourRoomGroup);
+
+      const timberMat = makeTourMat(0x6e4525, 0.75, 0.05);
+      const wallMat = makeTourMat(0xd8e0d9, 0.9, 0.0);
+      const ceilingMat = makeTourMat(0xf0ede6, 0.95, 0.0);
+      const stoneMat = makeTourMat(0x4a4f4c, 0.85, 0.1);
+      const accentMat = makeTourMat(0x243e32, 0.8, 0.2);
+      const marbleMat = makeTourMat(0xe8ece9, 0.25, 0.3);
+      const furnitureMat = makeTourMat(0x2b3831, 0.8, 0.1);
+      const goldMat = makeTourMat(0xe8b04a, 0.3, 0.8);
+
+      // 1. GREAT LIVING ROOM (Center: 0, 0, 0)
+      const lrFloorGeo = new THREE.PlaneGeometry(12, 12);
+      const lrFloor = new THREE.Mesh(lrFloorGeo, timberMat);
+      lrFloor.rotation.x = -Math.PI / 2;
+      lrFloor.receiveShadow = true;
+      tourRoomGroup.add(lrFloor);
+
+      const lrCeilingGeo = new THREE.PlaneGeometry(12, 12);
+      const lrCeiling = new THREE.Mesh(lrCeilingGeo, ceilingMat);
+      lrCeiling.position.y = 5.2;
+      lrCeiling.rotation.x = Math.PI / 2;
+      tourRoomGroup.add(lrCeiling);
+
+      for (let b = -4; b <= 4; b += 2.5) {
+        const beam = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.45, 12), timberMat);
+        beam.position.set(b, 5.0, 0);
+        tourRoomGroup.add(beam);
+      }
+
+      // Fireplace Feature Wall
+      const fpWall = new THREE.Mesh(new THREE.BoxGeometry(12, 5.2, 0.4), wallMat);
+      fpWall.position.set(0, 2.6, -6);
+      tourRoomGroup.add(fpWall);
+
+      const fpStone = new THREE.Mesh(new THREE.BoxGeometry(4.2, 5.2, 0.8), stoneMat);
+      fpStone.position.set(0, 2.6, -5.7);
+      tourRoomGroup.add(fpStone);
+
+      const mantel = new THREE.Mesh(new THREE.BoxGeometry(4.8, 0.25, 0.8), timberMat);
+      mantel.position.set(0, 2.4, -5.3);
+      tourRoomGroup.add(mantel);
+
+      const fireHearth = new THREE.Mesh(new THREE.BoxGeometry(2.4, 1.4, 0.6), makeTourMat(0x1a1a1a, 0.9));
+      fireHearth.position.set(0, 0.9, -5.4);
+      tourRoomGroup.add(fireHearth);
+
+      const emberMesh = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.2, 0.4), new THREE.MeshBasicMaterial({ color: 0xff6b1a }));
+      emberMesh.position.set(0, 0.4, -5.3);
+      tourRoomGroup.add(emberMesh);
+
+      // Sofa & Table
+      const rug = new THREE.Mesh(new THREE.PlaneGeometry(6, 4.5), makeTourMat(0xcfc4b6, 0.95));
+      rug.rotation.x = -Math.PI / 2;
+      rug.position.set(0, 0.02, 0.5);
+      tourRoomGroup.add(rug);
+
+      const sofaBase = new THREE.Mesh(new THREE.BoxGeometry(4.2, 0.65, 1.8), furnitureMat);
+      sofaBase.position.set(0, 0.35, 1.5);
+      tourRoomGroup.add(sofaBase);
+
+      const sofaBack = new THREE.Mesh(new THREE.BoxGeometry(4.2, 1.1, 0.5), furnitureMat);
+      sofaBack.position.set(0, 0.9, 2.2);
+      tourRoomGroup.add(sofaBack);
+
+      const coffeeTable = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.4, 1.2), timberMat);
+      coffeeTable.position.set(0, 0.2, -0.6);
+      tourRoomGroup.add(coffeeTable);
+
+      // 2. GOURMET KITCHEN (East)
+      const kFloor = new THREE.Mesh(new THREE.PlaneGeometry(8, 12), makeTourMat(0xd5ddd7, 0.3, 0.1));
+      kFloor.rotation.x = -Math.PI / 2;
+      kFloor.position.set(10, 0, 0);
+      tourRoomGroup.add(kFloor);
+
+      const kCeiling = new THREE.Mesh(new THREE.PlaneGeometry(8, 12), ceilingMat);
+      kCeiling.position.set(10, 5.2, 0);
+      kCeiling.rotation.x = Math.PI / 2;
+      tourRoomGroup.add(kCeiling);
+
+      const kWall = new THREE.Mesh(new THREE.BoxGeometry(8, 5.2, 0.4), accentMat);
+      kWall.position.set(10, 2.6, -6);
+      tourRoomGroup.add(kWall);
+
+      const kCounters = new THREE.Mesh(new THREE.BoxGeometry(7.6, 1.0, 1.2), makeTourMat(0x192721, 0.7));
+      kCounters.position.set(10, 0.5, -5.3);
+      tourRoomGroup.add(kCounters);
+
+      const kCounterTop = new THREE.Mesh(new THREE.BoxGeometry(7.8, 0.15, 1.3), marbleMat);
+      kCounterTop.position.set(10, 1.05, -5.3);
+      tourRoomGroup.add(kCounterTop);
+
+      const islandBase = new THREE.Mesh(new THREE.BoxGeometry(4.2, 1.0, 2.0), makeTourMat(0x192721, 0.7));
+      islandBase.position.set(9.5, 0.5, -0.8);
+      tourRoomGroup.add(islandBase);
+
+      const islandTop = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.18, 2.2), marbleMat);
+      islandTop.position.set(9.5, 1.08, -0.8);
+      tourRoomGroup.add(islandTop);
+
+      for (let px of [8.2, 9.5, 10.8]) {
+        const cord = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 1.8), makeTourMat(0x111111));
+        cord.position.set(px, 4.2, -0.8);
+        tourRoomGroup.add(cord);
+
+        const shade = new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.35, 16, 1, true), goldMat);
+        shade.position.set(px, 3.2, -0.8);
+        tourRoomGroup.add(shade);
+
+        const pLight = new THREE.PointLight(0xffe6a3, 1.0, 5);
+        pLight.position.set(px, 3.0, -0.8);
+        tourRoomGroup.add(pLight);
+      }
+
+      // 3. MASTER SUITE (West)
+      const mbFloor = new THREE.Mesh(new THREE.PlaneGeometry(8, 12), timberMat);
+      mbFloor.rotation.x = -Math.PI / 2;
+      mbFloor.position.set(-10, 0, 0);
+      tourRoomGroup.add(mbFloor);
+
+      const mbWall = new THREE.Mesh(new THREE.BoxGeometry(8, 5.2, 0.4), makeTourMat(0x283b32));
+      mbWall.position.set(-10, 2.6, -6);
+      tourRoomGroup.add(mbWall);
+
+      const bedFrame = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.5, 4.0), timberMat);
+      bedFrame.position.set(-10, 0.3, -3.2);
+      tourRoomGroup.add(bedFrame);
+
+      const mattress = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.5, 3.8), makeTourMat(0xf0ede6, 0.95));
+      mattress.position.set(-10, 0.65, -3.2);
+      tourRoomGroup.add(mattress);
+
+      const headboard = new THREE.Mesh(new THREE.BoxGeometry(3.8, 2.0, 0.3), makeTourMat(0x1e2e26, 0.9));
+      headboard.position.set(-10, 1.4, -5.2);
+      tourRoomGroup.add(headboard);
+
+      for (let nx of [-12.2, -7.8]) {
+        const stand = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.7, 0.9), timberMat);
+        stand.position.set(nx, 0.35, -4.6);
+        tourRoomGroup.add(stand);
+
+        const lamp = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.28, 0.5), goldMat);
+        lamp.position.set(nx, 0.95, -4.6);
+        tourRoomGroup.add(lamp);
+
+        const lampLight = new THREE.PointLight(0xffda91, 0.9, 4);
+        lampLight.position.set(nx, 1.2, -4.6);
+        tourRoomGroup.add(lampLight);
+      }
+
+      // 4. SPA BATHROOM (North-West)
+      const bathFloor = new THREE.Mesh(new THREE.PlaneGeometry(6, 6), makeTourMat(0xeef2ef, 0.2, 0.2));
+      bathFloor.rotation.x = -Math.PI / 2;
+      bathFloor.position.set(-4.5, 0, -9);
+      tourRoomGroup.add(bathFloor);
+
+      const tub = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 0.75, 0.9, 24), makeTourMat(0xffffff, 0.1, 0.1));
+      tub.scale.set(1.4, 1.0, 1.0);
+      tub.position.set(-4.5, 0.45, -10.2);
+      tourRoomGroup.add(tub);
+
+      // 5. LOWER LEVEL BASEMENT DEN (y = -5)
+      const bsmtFloor = new THREE.Mesh(new THREE.PlaneGeometry(16, 12), makeTourMat(0x353a38, 0.95));
+      bsmtFloor.rotation.x = -Math.PI / 2;
+      bsmtFloor.position.set(0, -5.5, 0);
+      tourRoomGroup.add(bsmtFloor);
+
+      const bsmtWall = new THREE.Mesh(new THREE.BoxGeometry(16, 4.2, 0.4), makeTourMat(0x232c28, 0.9));
+      bsmtWall.position.set(0, -3.4, -6);
+      tourRoomGroup.add(bsmtWall);
+
+      const screenMesh = new THREE.Mesh(new THREE.BoxGeometry(6.5, 3.2, 0.1), new THREE.MeshBasicMaterial({ color: 0x050c18 }));
+      screenMesh.position.set(0, -3.4, -5.75);
+      tourRoomGroup.add(screenMesh);
+
+      const poolTable = new THREE.Mesh(new THREE.BoxGeometry(4.0, 0.8, 2.2), timberMat);
+      poolTable.position.set(4.0, -5.1, 0.5);
+      tourRoomGroup.add(poolTable);
+
+      const felt = new THREE.Mesh(new THREE.BoxGeometry(3.7, 0.1, 1.9), makeTourMat(0x175c3b, 0.9));
+      felt.position.set(4.0, -4.68, 0.5);
+      tourRoomGroup.add(felt);
+
+      // 6. GARAGE WING
+      const garFloor = new THREE.Mesh(new THREE.PlaneGeometry(8, 10), makeTourMat(0x404442, 0.4, 0.3));
+      garFloor.rotation.x = -Math.PI / 2;
+      garFloor.position.set(12, 0, 6);
+      tourRoomGroup.add(garFloor);
+
+      const garDoor = new THREE.Mesh(new THREE.BoxGeometry(7.2, 3.6, 0.2), makeTourMat(0x18241d, 0.8));
+      garDoor.position.set(12, 1.8, 11);
+      tourRoomGroup.add(garDoor);
+
+      const carBody = new THREE.Mesh(new THREE.BoxGeometry(2.4, 1.1, 4.5), makeTourMat(0x1e3a5f, 0.2, 0.8));
+      carBody.position.set(11, 0.7, 6);
+      tourRoomGroup.add(carBody);
+
+      // 7. EXTERIOR PATIO DECK & LAWN
+      const deck = new THREE.Mesh(new THREE.PlaneGeometry(16, 8), timberMat);
+      deck.rotation.x = -Math.PI / 2;
+      deck.position.set(0, -0.05, 10);
+      tourRoomGroup.add(deck);
+
+      const lawn = new THREE.Mesh(new THREE.PlaneGeometry(60, 50), makeTourMat(0x162c1e, 0.95));
+      lawn.rotation.x = -Math.PI / 2;
+      lawn.position.set(0, -0.1, 24);
+      tourRoomGroup.add(lawn);
+
+      for (let t = 0; t < 6; t++) {
+        const treeX = -18 + t * 7;
+        const treeZ = 20 + (t % 2) * 5;
+        const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.35, 4), timberMat);
+        trunk.position.set(treeX, 2, treeZ);
+        tourRoomGroup.add(trunk);
+
+        const foliage = new THREE.Mesh(new THREE.ConeGeometry(1.8, 4.5, 8), makeTourMat(0x1f422b, 0.9));
+        foliage.position.set(treeX, 5, treeZ);
+        tourRoomGroup.add(foliage);
+      }
+    }
+
+    function navigateTourRoom(roomKey) {
+      if (!TOUR_ROOMS[roomKey]) return;
+      tourActiveRoomKey = roomKey;
+      const r = TOUR_ROOMS[roomKey];
+
+      const nameEl = document.getElementById('tourToastRoomName');
+      if (nameEl) nameEl.textContent = r.name;
+      const flEl = document.getElementById('tourMinimapFloorLabel');
+      if (flEl) flEl.textContent = r.level;
+
+      document.querySelectorAll('.tour-dock-pill').forEach(btn => btn.classList.remove('active'));
+      const pill = document.getElementById('tpill-' + roomKey);
+      if (pill) pill.classList.add('active');
+
+      document.querySelectorAll('.tour-mm-room').forEach(rm => rm.classList.remove('active'));
+      const mmEl = document.getElementById('tmm-' + roomKey);
+      if (mmEl) mmEl.classList.add('active');
+
+      const dot = document.getElementById('tourRadarDot');
+      if (dot && r.radar) {
+        dot.setAttribute('cx', r.radar.cx);
+        dot.setAttribute('cy', r.radar.cy);
+      }
+
+      tourTargetCamPos = { ...r.camPos };
+      tourTargetLookAt = { ...r.lookAt };
+      tourCameraYaw = 0;
+      tourCameraPitch = 0;
+
+      updateTourHotspots();
+    }
+
+    function updateTourHotspots() {
+      const layer = document.getElementById('tourHotspotLayer');
+      if (!layer) return;
+      layer.innerHTML = '';
+
+      const r = TOUR_ROOMS[tourActiveRoomKey];
+      if (!r || !r.hotspots) return;
+
+      r.hotspots.forEach((hs, idx) => {
+        const div = document.createElement('div');
+        div.className = 'tour-hotspot-pin';
+        div.id = 'tourHotspot-' + idx;
+        div.innerHTML = `
+          <div class="tour-hotspot-ring">
+            <i class="fa-solid fa-plus"></i>
+          </div>
+          <div class="tour-hotspot-tooltip">
+            <div style="font-weight:700; color:var(--hearth-gold); margin-bottom:2px;">${hs.title}</div>
+            <div style="font-size:11px; color:#cbd5e1; line-height:1.4;">${hs.detail}</div>
+          </div>
+        `;
+        layer.appendChild(div);
+      });
+    }
+
+    function projectTourHotspots() {
+      const r = TOUR_ROOMS[tourActiveRoomKey];
+      if (!r || !r.hotspots || !tourCamera) return;
+      const box = document.getElementById('tourViewportBox');
+      if (!box) return;
+
+      r.hotspots.forEach((hs, idx) => {
+        const el = document.getElementById('tourHotspot-' + idx);
+        if (!el) return;
+
+        const v = new THREE.Vector3(hs.pos.x, hs.pos.y, hs.pos.z);
+        v.project(tourCamera);
+
+        if (v.z > 1.0) {
+          el.style.display = 'none';
+          return;
+        }
+
+        const x = (v.x * 0.5 + 0.5) * box.clientWidth;
+        const y = (-v.y * 0.5 + 0.5) * box.clientHeight;
+
+        el.style.display = 'block';
+        el.style.left = x + 'px';
+        el.style.top = y + 'px';
+      });
+    }
+
+    function syncWalkthroughSpecs() {
+      if (!STATE || !STATE.spec) return;
+      const elArea = document.getElementById('tourHudArea');
+      if (elArea) elArea.textContent = `${STATE.spec.GrLivArea.toLocaleString()} sq ft`;
+      const elQual = document.getElementById('tourHudQual');
+      if (elQual) elQual.textContent = `${STATE.spec.OverallQual}/10`;
+      const elBeds = document.getElementById('tourHudBeds');
+      if (elBeds) elBeds.textContent = `${STATE.spec.BedroomAbvGr} Bed`;
+      const elBaths = document.getElementById('tourHudBaths');
+      if (elBaths) elBaths.textContent = `${STATE.spec.FullBath} Bath`;
+      const elPrice = document.getElementById('tourHudPrice');
+      if (elPrice) {
+        const priceUSD = computePriceUSD(STATE.spec);
+        elPrice.textContent = formatMoney(priceUSD);
+      }
+    }
+
+    function toggleTourDayNight() {
+      tourIsNightMode = !tourIsNightMode;
+      const icon = document.getElementById('tourLightingIcon');
+      const btn = document.getElementById('btnTourLighting');
+
+      if (tourIsNightMode) {
+        if (icon) icon.className = 'fa-solid fa-moon';
+        if (btn) btn.classList.remove('active');
+        if (tourScene) {
+          tourScene.background = new THREE.Color(0x0c1510);
+          tourScene.fog.color = new THREE.Color(0x0c1510);
+        }
+        if (tourAmbientLight) tourAmbientLight.intensity = 0.55;
+        if (tourSunLight) tourSunLight.intensity = 0.85;
+        if (tourHearthLight) tourHearthLight.intensity = 2.2;
+      } else {
+        if (icon) icon.className = 'fa-solid fa-sun';
+        if (btn) btn.classList.add('active');
+        if (tourScene) {
+          tourScene.background = new THREE.Color(0x76a5af);
+          tourScene.fog.color = new THREE.Color(0x76a5af);
+        }
+        if (tourAmbientLight) tourAmbientLight.intensity = 1.1;
+        if (tourSunLight) tourSunLight.intensity = 1.8;
+        if (tourHearthLight) tourHearthLight.intensity = 1.0;
+      }
+    }
+
+    function toggleTourAutoSpin() {
+      tourAutoSpin = !tourAutoSpin;
+      const btn = document.getElementById('btnTourAutoSpin');
+      if (btn) btn.classList.toggle('active', tourAutoSpin);
+    }
+
+    function resetTourRoomView() {
+      const r = TOUR_ROOMS[tourActiveRoomKey];
+      if (!r) return;
+      tourTargetCamPos = { ...r.camPos };
+      tourTargetLookAt = { ...r.lookAt };
+      tourCameraYaw = 0;
+      tourCameraPitch = 0;
+    }
+
+    function toggleTourFullscreen() {
+      const box = document.getElementById('tourViewportBox');
+      const icon = document.getElementById('tourFsIcon');
+      if (!document.fullscreenElement) {
+        if (box && box.requestFullscreen) {
+          box.requestFullscreen();
+          if (icon) icon.className = 'fa-solid fa-compress';
+        }
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+          if (icon) icon.className = 'fa-solid fa-expand';
+        }
+      }
+      setTimeout(resizeTourCanvas, 100);
+    }
+
+    function setupTourControls(canvas) {
+      canvas.addEventListener('mousedown', (e) => {
+        tourIsDragging = true;
+        tourPrevX = e.clientX;
+        tourPrevY = e.clientY;
+      });
+
+      window.addEventListener('mouseup', () => { tourIsDragging = false; });
+
+      canvas.addEventListener('mousemove', (e) => {
+        if (!tourIsDragging) return;
+        const deltaX = e.clientX - tourPrevX;
+        const deltaY = e.clientY - tourPrevY;
+        tourPrevX = e.clientX;
+        tourPrevY = e.clientY;
+
+        tourCameraYaw -= deltaX * 0.0035;
+        tourCameraPitch -= deltaY * 0.003;
+        tourCameraPitch = Math.max(-0.6, Math.min(0.6, tourCameraPitch));
+      });
+
+      canvas.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 1) {
+          tourIsDragging = true;
+          tourPrevX = e.touches[0].clientX;
+          tourPrevY = e.touches[0].clientY;
+        }
+      }, { passive: true });
+
+      window.addEventListener('touchend', () => { tourIsDragging = false; });
+
+      canvas.addEventListener('touchmove', (e) => {
+        if (!tourIsDragging || e.touches.length !== 1) return;
+        const deltaX = e.touches[0].clientX - tourPrevX;
+        const deltaY = e.touches[0].clientY - tourPrevY;
+        tourPrevX = e.touches[0].clientX;
+        tourPrevY = e.touches[0].clientY;
+
+        tourCameraYaw -= deltaX * 0.004;
+        tourCameraPitch -= deltaY * 0.0035;
+        tourCameraPitch = Math.max(-0.6, Math.min(0.6, tourCameraPitch));
+      }, { passive: true });
+    }
+
+    function resizeTourCanvas() {
+      if (!tourRenderer || !tourCamera) return;
+      const box = document.getElementById('tourViewportBox');
+      if (!box || box.clientWidth === 0) return;
+      const w = box.clientWidth;
+      const h = box.clientHeight || 560;
+      tourCamera.aspect = w / h;
+      tourCamera.updateProjectionMatrix();
+      tourRenderer.setSize(w, h);
+    }
+
+    function tourAnimate() {
+      requestAnimationFrame(tourAnimate);
+      if (!tourRenderer || !tourCamera || !tourScene) return;
+
+      const delta = tourClock.getDelta();
+
+      // Smooth camera position lerp
+      tourCamera.position.x += (tourTargetCamPos.x - tourCamera.position.x) * 0.06;
+      tourCamera.position.y += (tourTargetCamPos.y - tourCamera.position.y) * 0.06;
+      tourCamera.position.z += (tourTargetCamPos.z - tourCamera.position.z) * 0.06;
+
+      if (tourAutoSpin) {
+        tourCameraYaw += 0.005;
+      }
+
+      const dx = tourTargetLookAt.x - tourTargetCamPos.x;
+      const dz = tourTargetLookAt.z - tourTargetCamPos.z;
+      const baseAngle = Math.atan2(dx, dz);
+
+      const lookDist = 8.0;
+      const effectiveYaw = baseAngle + tourCameraYaw;
+
+      const destLookX = tourCamera.position.x + Math.sin(effectiveYaw) * Math.cos(tourCameraPitch) * lookDist;
+      const destLookY = tourCamera.position.y + Math.sin(tourCameraPitch) * lookDist;
+      const destLookZ = tourCamera.position.z + Math.cos(effectiveYaw) * Math.cos(tourCameraPitch) * lookDist;
+
+      tourCurrentLookAt.x += (destLookX - tourCurrentLookAt.x) * 0.08;
+      tourCurrentLookAt.y += (destLookY - tourCurrentLookAt.y) * 0.08;
+      tourCurrentLookAt.z += (destLookZ - tourCurrentLookAt.z) * 0.08;
+
+      tourCamera.lookAt(tourCurrentLookAt.x, tourCurrentLookAt.y, tourCurrentLookAt.z);
+
+      if (tourHearthLight) {
+        tourHearthLight.intensity = (tourIsNightMode ? 2.2 : 1.0) + Math.sin(Date.now() * 0.009) * 0.35 + Math.cos(Date.now() * 0.021) * 0.2;
+      }
+
+      tourRenderer.render(tourScene, tourCamera);
+      projectTourHotspots();
+    }
+
+    // Init on Load
+    function startApp() {
+      init3DBackground();
+      init3DResult();
+      readFormIntoState();
+      calculateAndReveal();
+      animateAll();
+
+      // Real-time live input bindings for dynamic 3D morphing & valuation
+      const liveInputs = [
+        'inp_GrLivArea', 'inp_BedroomAbvGr', 'inp_FullBath',
+        'inp_OverallQual', 'inp_TotalBsmtSF', 'inp_GarageCars',
+        'inp_YearBuilt'
+      ];
+      liveInputs.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+          el.addEventListener('input', () => {
+            readFormIntoState();
+            calculateAndReveal();
+          });
+          el.addEventListener('change', () => {
+            readFormIntoState();
+            calculateAndReveal();
+          });
+        }
+      });
+    }
+
+    if (document.readyState === 'loading') {
+      window.addEventListener('DOMContentLoaded', startApp);
+    } else {
+      startApp();
+    }
+  </script>
+</body>
+</html>

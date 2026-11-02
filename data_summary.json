@@ -1,0 +1,144 @@
+{
+  "dataset": "Ames Housing Dataset (Ames, Iowa)",
+  "total_records": 1458,
+  "outliers_removed": 2,
+  "median_price": 163000,
+  "mean_price": 180921,
+  "price_std": 79442,
+  "feature_ranges": {
+    "GrLivArea": {
+      "label": "Ground Living Area",
+      "unit": "sq ft",
+      "min": 500,
+      "max": 4000,
+      "default": 1500,
+      "step": 25,
+      "p25": 1128,
+      "median": 1464,
+      "p75": 1776,
+      "help": "Above ground living area in square feet. Outliers (>4000 sq ft) dropped."
+    },
+    "BedroomAbvGr": {
+      "label": "Bedrooms Above Ground",
+      "unit": "rooms",
+      "min": 1,
+      "max": 6,
+      "default": 3,
+      "step": 1,
+      "p25": 2,
+      "median": 3,
+      "p75": 3,
+      "help": "Count of bedrooms above basement level."
+    },
+    "FullBath": {
+      "label": "Full Bathrooms",
+      "unit": "baths",
+      "min": 1,
+      "max": 4,
+      "default": 2,
+      "step": 1,
+      "p25": 1,
+      "median": 2,
+      "p75": 2,
+      "help": "Full bathrooms above grade."
+    },
+    "OverallQual": {
+      "label": "Overall Quality",
+      "unit": "/10",
+      "min": 1,
+      "max": 10,
+      "default": 6,
+      "step": 1,
+      "p25": 5,
+      "median": 6,
+      "p75": 7,
+      "help": "Rates overall material and finish (1=Very Poor, 5=Average, 7=Good, 10=Luxury)."
+    },
+    "TotalBsmtSF": {
+      "label": "Total Basement Area",
+      "unit": "sq ft",
+      "min": 0,
+      "max": 3000,
+      "default": 900,
+      "step": 25,
+      "p25": 795,
+      "median": 991,
+      "p75": 1298,
+      "help": "Total basement square footage (0 = crawlspace/slab, no basement)."
+    },
+    "GarageCars": {
+      "label": "Garage Capacity",
+      "unit": "cars",
+      "min": 0,
+      "max": 4,
+      "default": 2,
+      "step": 1,
+      "p25": 1,
+      "median": 2,
+      "p75": 2,
+      "help": "Size of garage in car storage capacity."
+    },
+    "YearBuilt": {
+      "label": "Year Built",
+      "unit": "year",
+      "min": 1872,
+      "max": 2010,
+      "default": 1985,
+      "step": 1,
+      "p25": 1954,
+      "median": 1973,
+      "p75": 2000,
+      "help": "Original construction year."
+    }
+  },
+  "presets": {
+    "small_flat": {
+      "name": "Starter Home / Small Flat",
+      "description": "Compact cozy suburban starter home",
+      "GrLivArea": 850,
+      "BedroomAbvGr": 2,
+      "FullBath": 1,
+      "OverallQual": 5,
+      "TotalBsmtSF": 400,
+      "GarageCars": 1,
+      "YearBuilt": 1965
+    },
+    "family_home": {
+      "name": "Family Suburban Home",
+      "description": "Balanced 3-bedroom home with 2-car garage & yard",
+      "GrLivArea": 1850,
+      "BedroomAbvGr": 3,
+      "FullBath": 2,
+      "OverallQual": 7,
+      "TotalBsmtSF": 1000,
+      "GarageCars": 2,
+      "YearBuilt": 1998
+    },
+    "premium_house": {
+      "name": "Premium Luxury Estate",
+      "description": "Spacious executive residence with high-end finishes",
+      "GrLivArea": 3200,
+      "BedroomAbvGr": 4,
+      "FullBath": 3,
+      "OverallQual": 9,
+      "TotalBsmtSF": 1800,
+      "GarageCars": 3,
+      "YearBuilt": 2008
+    }
+  },
+  "correlations": [
+    { "feature": "OverallQual", "correlation": 0.79 },
+    { "feature": "GrLivArea", "correlation": 0.71 },
+    { "feature": "GarageCars", "correlation": 0.64 },
+    { "feature": "TotalBsmtSF", "correlation": 0.61 },
+    { "feature": "FullBath", "correlation": 0.56 },
+    { "feature": "YearBuilt", "correlation": 0.52 },
+    { "feature": "BedroomAbvGr", "correlation": 0.17 }
+  ],
+  "missing_summary": [
+    { "feature": "TotalBsmtSF", "missing_count": 0, "strategy": "Median Imputer inside Pipeline" },
+    { "feature": "GarageCars", "missing_count": 0, "strategy": "Mode / Median Imputer inside Pipeline" },
+    { "feature": "OverallQual", "missing_count": 0, "strategy": "No missing values in train" },
+    { "feature": "GrLivArea", "missing_count": 0, "strategy": "No missing values in train" }
+  ]
+}
